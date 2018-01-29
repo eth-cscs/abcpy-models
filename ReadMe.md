@@ -1,4 +1,4 @@
-#ABCpy Models
+# ABCpy Models
 
 This repository contains a number of different models implemented in ABCpy:
 
