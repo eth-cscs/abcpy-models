@@ -7,7 +7,7 @@ Description of the model
 ## Dependencies 
 - g++ 
 - Swig 
-- etc.
+- abcpy0.3.0
 
 ## Steup 
 
