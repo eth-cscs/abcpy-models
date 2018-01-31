@@ -9,9 +9,7 @@ Description of the model
 - abcpy0.3.0
 
 ## Steup 
-
-- Run make 
-- python3 Inference.py (if you want to run)
+- To be added
 
 ## Test 
 Write  TEST function to test Model, statistics and distance 
