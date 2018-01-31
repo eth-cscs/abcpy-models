@@ -1,3 +1,6 @@
+import numpy as np
+from abcpy.distances import Distance
+
 class DepositionDistance(Distance):
     """
     This class implements the Euclidean distance between two vectors.

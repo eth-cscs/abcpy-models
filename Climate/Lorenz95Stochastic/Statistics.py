@@ -1,3 +1,4 @@
+from abc.statistics import Statistics
 
 class HakkarainenLorenzStatistics(Statistics):
     """

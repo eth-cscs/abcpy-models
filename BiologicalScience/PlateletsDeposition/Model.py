@@ -1,8 +1,7 @@
 import numpy as np
-from abcpy.distances import Distance
 from abcpy.models import Model
 from examples.bastien.param_5.deposition_model import deposition_model
-from abcpy.statistics import Statistics
+
 
 class Deposition(Model):
     def __init__(self, prior, pAd = None, pAg = None, pT = None, pF = None, aT = None, seed=None):

@@ -1,3 +1,5 @@
+import numpy as np
+from abcpy.statistics import Statistics
         
 class DepositionStatistics(Statistics):
     """
