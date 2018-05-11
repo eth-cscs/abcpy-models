@@ -1,10 +1,22 @@
+import numpy as np
 import networkx as nx
-import numpy as np 
-from Diffusion.Diffusion_SC import Network_generate, Diffusion_prior, Diffusion_model_SI, Diffusion_kernel, SABC_Diffusion
+
+from SimpleContagion.Model import SimpleContagion
+from SimpleContagion.Statistics import DiffusionIdentityStatistics
+from SimpleContagion.Distance import SubsetDistance
+from SimpleContagion.Kernel import DiffusionKernel
+from SimpleContagion.Prior import DiffusionPrior
+from SimpleContagion.Inference import SABCDiffusion
+
+
+from Diffusion.Diffusion_SC import Network_generate
 import time
 
 from abcpy.backends import BackendDummy
 backend = BackendDummy()
+
+#from abcpy.backends import BackendMPI as Backend
+#backend = Backend()
 
 
 # Different cases
@@ -45,9 +57,9 @@ network = nx.from_numpy_matrix(A)
 # Generate dataset
 #==============================================================================
 theta, seed = 0.3, 1
-prior = Diffusion_prior(np.array([1,0]), network, network.nodes(),[0.0,0.0],[1.0,1.0],seed = 1)
+prior = DiffusionPrior(np.array([1,0]), network, network.nodes(),[0.0,0.0],[1.0,1.0],seed = 1)
 for infection_start_point in [infection_node]:   
-    model = Diffusion_model_SI(prior, network, time_observed, theta, infection_start_point, seed)
+    model = SimpleContagion(prior, network, time_observed, theta, infection_start_point, seed)
     y_obs = model.simulate(100)    
     np.save('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_yobs_'+str(infection_start_point)+'.npy',y_obs)
 # 
@@ -57,10 +69,9 @@ for infection_start_point in [infection_node]:
 #==============================================================================
 # 
 # Import Statistics and Distance
-from Diffusion.Diffusion_SC import Diffusion_Identity_statistics
-from Diffusion.Diffusion_SC import Subset_distance
-stat_calc = Diffusion_Identity_statistics(degree=1, cross=0)
-dist_calc = Subset_distance(stat_calc, network)
+
+stat_calc = DiffusionIdentityStatistics(degree=1, cross=0)
+dist_calc = SubsetDistance(stat_calc, network)
 # 
 # Define model to simulate observed dataset
 theta, seed = 0.3, 1
@@ -73,13 +84,13 @@ for infection_start_point in [infection_node]:
     print('Infection Start point:' + str(infection_start_point))
     for ind in range(len(y_obs)):
         print(ind)           
-        kernel = Diffusion_kernel(network, mean = 0, var = 1, seed_node = 1, seed = 1)
+        kernel = DiffusionKernel(network, mean = 0, var = 1, seed_node = 1, seed = 1)
         #Redefine prior given observed dataset       
-        prior = Diffusion_prior(np.array([1,0]), network, np.array(y_obs[ind][0][0]),[0.0,0.0],[1.0,1.0],seed = 1)
+        prior = DiffusionPrior(np.array([1,0]), network, np.array(y_obs[ind][0][0]),[0.0,0.0],[1.0,1.0],seed = 1)
         #Initiate model with new prior
-        model = Diffusion_model_SI(prior, network, time_observed, theta, infection_start_point, seed = None)    
+        model = SimpleContagion(prior, network, time_observed, theta, infection_start_point, seed = None)
         # Sampling using SABC       
-        sampler_sabc = SABC_Diffusion(model, dist_calc, kernel, backend, seed = 1)
+        sampler_sabc = SABCDiffusion(model, dist_calc, kernel, backend, seed = 1)
         step, epsilon_sabc, n_samples, n_samples_per_param, ar_cutoff, beta, delta, v = 2, np.array([40.0]), 4, 1, 0.0001, 2, 0.2, 0.3
         start_time = time.time()
         journal_sabc = sampler_sabc.sample([y_obs[ind]], step, epsilon_sabc, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample=None, n_update=None, adaptcov=1, full_output=1)
