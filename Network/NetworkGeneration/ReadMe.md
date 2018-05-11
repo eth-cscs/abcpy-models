@@ -8,7 +8,7 @@ Description of the model
 - Networkx Python package 
 - abcpy0.3.0
 
-## Steup 
+## Setup 
 - to be added
 
 ## Test 
