@@ -1,18 +1,15 @@
-# Platelets Deposition Model
+# Network generation models
 
 Description of the model 
 
 ## Reference
 
 ## Dependencies 
-- g++ 
-- Swig 
+- Networkx Python package 
 - abcpy0.3.0
 
 ## Steup 
-
-- Run make 
-- python3 Inference.py (if you want to run)
+- to be added
 
 ## Test 
 Write  TEST function to test Model, statistics and distance 
