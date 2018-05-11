@@ -9,51 +9,30 @@ from SimpleContagion.Prior import DiffusionPrior
 from SimpleContagion.Inference import SABCDiffusion
 
 
-from Diffusion.Diffusion_SC import Network_generate
-import time
-
+#==============================================================================
+# Choose the appropriate Backend for Parallelization
 from abcpy.backends import BackendDummy
 backend = BackendDummy()
-
 #from abcpy.backends import BackendMPI as Backend
 #backend = Backend()
-
-
-# Different cases
-case, infection_node = 'fb', 2000 # other cases 'ba', 'inrv', 'fb', 'tw', 'gog'
-node_no, theta = 4039, 0.3
+#==============================================================================
+# Different types of network (BA: Barabasi-Albert, ER: Erdos-Renyi, FB: Facebook Social Network,
+# INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
+# is the true seed-node.
+#==============================================================================
+#case, node_no, infection_node = 'ba', 100, 0
+#case, node_no, infection_node = 'er', 100, 0
+case, node_no, infection_node = 'inrv', 354, 70
+#case, node_no, infection_node = 'fb', 4039, 2000
+#==============================================================================
 # Time observed
 time_observed = np.arange(20, 70+1)
-#time_observed = np.array([15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,27, 28, 29, 30])
+#==============================================================================
 # Load network
-A = np.load('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_network.npy')
+#==============================================================================
+A = np.load('Networks/'+case+'_'+str(node_no)+'_network.npy')
 network = nx.from_numpy_matrix(A)
-
-# Generate Network
 #==============================================================================
-#generator = Network_generate(node_no,1)
-#network = generator.barabasi_albert(4)
-#network.nodes()
-#A = nx.to_numpy_matrix(network)
-#np.save('Results/All/'+case+'_'+str(node_no)+'_network.npy',A)
-# 
-#==============================================================================
-#==============================================================================
-# Indian rural village rading and saving the network
-#Real example
-#path = "Diffusion/Data/datav4.0/Data/1. Network Data/Adjacency Matrices/"
-#Gs = []
-#for k in range(1, 11):
-#    A = np.genfromtxt(path + "adj_allVillageRelationships_vilno_" + str(k) + ".csv", delimiter=',')
-#    G = nx.to_networkx_graph(A)
-#    Gs.append(G)
-#network = G
-#A = nx.to_numpy_matrix(network)
-#node_no = len(network.nodes())
-#np.save('Diffusion/Results/SC/inrv_'+str(node_no)+'_network.npy',A)
-#==============================================================================
-
-
 # Generate dataset
 #==============================================================================
 theta, seed = 0.3, 1
@@ -61,26 +40,17 @@ prior = DiffusionPrior(np.array([1,0]), network, network.nodes(),[0.0,0.0],[1.0,
 for infection_start_point in [infection_node]:   
     model = SimpleContagion(prior, network, time_observed, theta, infection_start_point, seed)
     y_obs = model.simulate(100)    
-    np.save('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_yobs_'+str(infection_start_point)+'.npy',y_obs)
-# 
+    np.save('Results/SimpleContagion/'+case+'_'+str(node_no)+'_yobs_'+str(infection_start_point)+'.npy',y_obs)
 #==============================================================================
-
 # Inference
 #==============================================================================
-# 
-# Import Statistics and Distance
-
+# Define Statistics and Distance
 stat_calc = DiffusionIdentityStatistics(degree=1, cross=0)
 dist_calc = SubsetDistance(stat_calc, network)
-# 
-# Define model to simulate observed dataset
-theta, seed = 0.3, 1
+
 for infection_start_point in [infection_node]:
-    # Load network
-    A = np.load('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_network.npy')
-    network = nx.from_numpy_matrix(A)
     # Load simulated dataset
-    y_obs = np.load('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_yobs_'+str(infection_start_point)+'.npy')
+    y_obs = np.load('Results/SimpleContagion/'+case+'_'+str(node_no)+'_yobs_'+str(infection_start_point)+'.npy')
     print('Infection Start point:' + str(infection_start_point))
     for ind in range(len(y_obs)):
         print(ind)           
@@ -95,6 +65,6 @@ for infection_start_point in [infection_node]:
         start_time = time.time()
         journal_sabc = sampler_sabc.sample([y_obs[ind]], step, epsilon_sabc, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample=None, n_update=None, adaptcov=1, full_output=1)
         print("--- %s seconds ---" % (time.time() - start_time))
-        journal_sabc.save('Diffusion/Results/SC/'+case+'_'+str(node_no)+'_joint_SABC_'+str(infection_start_point)+'_'+str(ind)+'.jrnl')
+        journal_sabc.save('Results/SimpleContagion/'+case+'_'+str(node_no)+'_joint_SABC_'+str(infection_start_point)+'_'+str(ind)+'.jrnl')
     
     del A, network, y_obs, kernel, prior, model, sampler_sabc, journal_sabc
