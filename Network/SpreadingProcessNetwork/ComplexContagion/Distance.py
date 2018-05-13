@@ -39,8 +39,7 @@ class SubsetDistance(Distance):
 
         result = (result1 + result2 + result3 + result4 + result5) / len(S1n[0])
 
-        # print(result)
-        return (result)
+        return (result[0])
 
     def local_distance(self, S1, S2, all_length):
 

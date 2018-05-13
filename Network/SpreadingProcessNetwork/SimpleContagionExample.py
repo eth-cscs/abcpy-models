@@ -20,9 +20,9 @@ backend = BackendDummy()
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
 # is the true seed-node.
 #==============================================================================
-#case, node_no, infection_node = 'ba', 100, 0
+case, node_no, infection_node = 'ba', 100, 0
 #case, node_no, infection_node = 'er', 100, 0
-case, node_no, infection_node = 'inrv', 354, 70
+#case, node_no, infection_node = 'inrv', 354, 70
 #case, node_no, infection_node = 'fb', 4039, 2000
 #==============================================================================
 # Time observed
@@ -62,9 +62,7 @@ for infection_start_point in [infection_node]:
         # Sampling using SABC       
         sampler_sabc = SABCDiffusion(model, dist_calc, kernel, backend, seed = 1)
         step, epsilon_sabc, n_samples, n_samples_per_param, ar_cutoff, beta, delta, v = 2, np.array([40.0]), 4, 1, 0.0001, 2, 0.2, 0.3
-        start_time = time.time()
         journal_sabc = sampler_sabc.sample([y_obs[ind]], step, epsilon_sabc, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample=None, n_update=None, adaptcov=1, full_output=1)
-        print("--- %s seconds ---" % (time.time() - start_time))
         journal_sabc.save('Results/SimpleContagion/'+case+'_'+str(node_no)+'_joint_SABC_'+str(infection_start_point)+'_'+str(ind)+'.jrnl')
     
     del A, network, y_obs, kernel, prior, model, sampler_sabc, journal_sabc

@@ -27,7 +27,7 @@ class SubsetDistance(Distance):
                 result2 += self.local_distance(S1, S2, self.all_length)
 
         result = (np.sqrt(result1) + result2) / len(S1n[0])
-        # print(result)
+        #print(result)
         return (result)
 
     def local_distance(self, S1, S2, all_length):
