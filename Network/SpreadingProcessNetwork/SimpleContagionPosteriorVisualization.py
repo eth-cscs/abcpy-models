@@ -7,7 +7,7 @@ from scipy.stats import gaussian_kde
 #==============================================================================
 # Different types of network (BA: Barabasi-Albert, ER: Erdos-Renyi, FB: Facebook Social Network,
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
-# is the true seed-node.
+# is the true seed-node. (Choose one of the options)
 #==============================================================================
 case, node_no, infection_start_point, ind = 'ba', 100, 4, 27
 #case, node_no, infection_start_point, ind = 'er', 100, 10, 17
