@@ -16,12 +16,13 @@ with 4039 nodes and Indian village contact network with 354 nodes.
 * SimpleContagionExample.py and ComplexContagionExample.py: Simulates corresponding spreading processes on a 
 chosen network and infers parameters for that simulated epidemic. 
 * BayeEstimate.py: Computes the Bayes Estimates
+* NetSleuth.py: Computes the seednode using NetSleuth algorithm.
 * SimpleContagionBEVisualization.py and ComplexContagionBEVisualization.py: Compute the Bayes Estimates for 
 the 100 simulated epidemics on the simulated networks and creates the corresponding Figures.
 * SimpleContagionPosteriorVisualization.py and ComplexContagionPosteriorVisualization.py: Creates the figure 
 of the posterior distributions.
-* Results: This folder is used to save the simulated epidemics and inferred results. (Empty, contents are avaiable on request)
-* Figure: This folder is used to save the Figures generated from the visualization file. (Empty, contents are avaiable on request)
+* Results: This folder is used to save the simulated epidemics and inferred results. (Empty, The inference results are saved)
+* Figure: This folder is used to save the Figures generated from the visualization file. (Empty, The Figures are saved here )
  
 
 ## Reference

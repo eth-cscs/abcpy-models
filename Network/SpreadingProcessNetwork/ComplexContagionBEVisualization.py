@@ -10,8 +10,8 @@ from BayesEstimate import BayesEstimateComplexContagion
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
 # is the true seed-node. (Choose one of the options)
 #==============================================================================
-#case, node_no, infection_start_point = 'ba', 100, 4
-case, node_no, infection_start_point = 'er', 100, 10
+case, node_no, infection_start_point = 'ba', 100, 4
+#case, node_no, infection_start_point = 'er', 100, 10
 #==============================================================================
 # Load network
 #==============================================================================
@@ -22,7 +22,7 @@ network = nx.from_numpy_matrix(A)
 # ==============================================================================
 Bayes_estimate_sn = np.zeros(shape=(100,))
 Bayes_estimate_theta = np.zeros(shape=(100,2))
-for ind in np.arange(100):
+for ind in np.arange(70):
     print(ind)
     # ==============================================================================
     # Load the inferred posterior distribution
@@ -36,7 +36,7 @@ for ind in np.arange(100):
     BE = BayesEstimateComplexContagion(network, samples,10)
     Bayes_estimate = BE.minimize()
     print(Bayes_estimate)
-    Bayes_estimate_theta[ind,:] = Bayes_estimate[:1]
+    Bayes_estimate_theta[ind,:] = Bayes_estimate[:2]
     Bayes_estimate_sn[ind] = Bayes_estimate[2]
 # ==============================================================================
 # Plot the density of Bayes Estimates
