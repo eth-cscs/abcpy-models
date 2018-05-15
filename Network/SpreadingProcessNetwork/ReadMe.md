@@ -20,8 +20,8 @@ chosen network and infers parameters for that simulated epidemic.
 the 100 simulated epidemics on the simulated networks and creates the corresponding Figures.
 * SimpleContagionPosteriorVisualization.py and ComplexContagionPosteriorVisualization.py: Creates the figure 
 of the posterior distributions.
-* Results: This folder is used to save the simulated epidemics and inferred results. (Empty, contains are avaiable on request)
-* Figure: This folder is used to save the Figures generated from the visualization file. (Empty, contains are avaiable on request)
+* Results: This folder is used to save the simulated epidemics and inferred results. (Empty, contents are avaiable on request)
+* Figure: This folder is used to save the Figures generated from the visualization file. (Empty, contents are avaiable on request)
  
 
 ## Reference
