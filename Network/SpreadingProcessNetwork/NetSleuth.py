@@ -42,8 +42,8 @@ def netsleuth(infectedi, G, beta):
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
 # is the true seed-node. (Choose one of the options)
 #==============================================================================
-#case, node_no, infection_start_point, const_figure_tick = 'ba', 100, 4, .69
-case, node_no, infection_start_point, const_figure_tick = 'er', 100, 10, .39
+#case, node_no, infection_start_point = 'ba', 100, 4
+case, node_no, infection_start_point = 'er', 100, 10
 #==============================================================================
 # Load network
 #==============================================================================
