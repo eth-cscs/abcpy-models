@@ -6,15 +6,11 @@ to perform the Bayesian inference of the spreading processe parameters
 and the seed node. Further we also include some codes to compute Bayes Estimate, 
 visualize posterior distribution etc. 
 
-The subfolders SimpleContagion and ComplexContagion contains the needed 
-functions for inference of the corresponding processes. 
-
-The subfolder Networks contains 4 different networks: Simulated Barabasi-Alber network
-with 100 nodes, Simulated Erdos-Renyi network with 100 nodes, Facebook social network
-with 4039 nodes and Indian village contact network with 354 nodes.
-
 # Folders and Files:
 --------------------------------
+* Networks: This subfolder contains 4 different networks: Simulated Barabasi-Alber network
+with 100 nodes, Simulated Erdos-Renyi network with 100 nodes, Facebook social network
+with 4039 nodes and Indian village contact network with 354 nodes.
 * SimpleContagion: This subfolder contains the needed functions for inference of the corresponding processes. 
 * ComplexContagion: This subfolder contains the needed functions for inference of the corresponding processes. 
 * SimpleContagionExample.py and ComplexContagionExample.py: Simulates corresponding spreading processes on a 
