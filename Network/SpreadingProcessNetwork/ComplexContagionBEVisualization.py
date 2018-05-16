@@ -22,7 +22,7 @@ network = nx.from_numpy_matrix(A)
 # ==============================================================================
 Bayes_estimate_sn = np.zeros(shape=(100,))
 Bayes_estimate_theta = np.zeros(shape=(100,2))
-for ind in np.arange(70):
+for ind in np.arange(100):
     print(ind)
     # ==============================================================================
     # Load the inferred posterior distribution

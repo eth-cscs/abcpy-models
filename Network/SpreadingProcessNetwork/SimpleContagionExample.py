@@ -20,8 +20,8 @@ backend = BackendDummy()
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
 # is the true seed-node. (Choose one of the options)
 #==============================================================================
-case, node_no, infection_node = 'ba', 100, 4
-#case, node_no, infection_node = 'er', 100, 10
+#case, node_no, infection_node = 'ba', 100, 4
+case, node_no, infection_node = 'er', 100, 10
 #case, node_no, infection_node = 'inrv', 354, 70
 #case, node_no, infection_node = 'fb', 4039, 2000
 #==============================================================================

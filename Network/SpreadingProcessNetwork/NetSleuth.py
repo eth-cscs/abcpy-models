@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse.linalg as linalg
 import networkx as nx
 import matplotlib.pyplot as plt
+import time
 
 #==============================================================================
 # Define NetSleuth Algorithm
