@@ -9,10 +9,10 @@ from scipy.stats import gaussian_kde
 # INRV: Indian Village contact Network) with node_no many nodes on the network. The infection_node
 # is the true seed-node. (Choose one of the options)
 #==============================================================================
-case, node_no, infection_start_point, ind = 'ba', 100, 4, 27
+#case, node_no, infection_start_point, ind = 'ba', 100, 4, 27
 #case, node_no, infection_start_point, ind = 'er', 100, 10, 17
 #case, node_no, infection_start_point, ind = 'inrv', 354, 70, 0
-#case, node_no, infection_start_point, ind = 'fb', 4039, 2000, 0
+case, node_no, infection_start_point, ind = 'fb', 4039, 2000, 0
 #==============================================================================
 # Load network
 #==============================================================================
@@ -27,8 +27,8 @@ samples = jj.get_parameters()
 # Compute Bayes Estimate
 #==============================================================================
 from BayesEstimate import BayesEstimateSimpleContagion
-BE = BayesEstimateSimpleContagion(network, samples)
-Bayes_estimate = BE.compute()
+BE = BayesEstimateSimpleContagion(network, samples, 10)
+Bayes_estimate = BE.minimize()
 print(Bayes_estimate)
 print(nx.shortest_path_length(network, infection_start_point, Bayes_estimate[1]))
 #==============================================================================

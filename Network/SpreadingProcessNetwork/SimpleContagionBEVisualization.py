@@ -23,6 +23,7 @@ network = nx.from_numpy_matrix(A)
 Bayes_estimate_sn = np.zeros(shape=(100,))
 Bayes_estimate_p = np.zeros(shape=(100,))
 for ind in np.arange(100):
+    print(ind)
     # ==============================================================================
     # Load the inferred posterior distribution
     # ==============================================================================
@@ -32,10 +33,11 @@ for ind in np.arange(100):
     # ==============================================================================
     # Compute Bayes Estimate
     # ==============================================================================
-    BE = BayesEstimateSimpleContagion(network, samples)
-    Bayes_estimate = BE.compute()
+    BE = BayesEstimateSimpleContagion(network, samples, 10)
+    Bayes_estimate = BE.minimize()
     Bayes_estimate_p[ind] = Bayes_estimate[0]
     Bayes_estimate_sn[ind] = Bayes_estimate[1]
+    print(Bayes_estimate)
 # ==============================================================================
 # Plot the density of Bayes Estimates
 # ==============================================================================
