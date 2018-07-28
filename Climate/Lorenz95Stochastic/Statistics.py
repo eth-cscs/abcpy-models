@@ -1,4 +1,5 @@
-from abc.statistics import Statistics
+import numpy as np
+from abcpy.statistics import Statistics
 
 class HakkarainenLorenzStatistics(Statistics):
     """
@@ -11,32 +12,43 @@ class HakkarainenLorenzStatistics(Statistics):
     in Geophysics, 19(1):127–143, Feb. 2012.
     """
 
-    def __init__(self, degree = 2, cross = True):
-        self.degree = degree                
+    def __init__(self, degree=2, cross=True):
+        self.degree = degree
         self.cross = cross
         
     def statistics(self, data):      
-        num_element = len(data)
+        if isinstance(data, list):
+            if np.array(data).shape == (len(data),):
+                if len(data) == 1:
+                    data = np.array(data).reshape(1, 1)
+                data = np.array(data).reshape(len(data), 1)
+            else:
+                data = np.concatenate(data).reshape(len(data), -1)
+        else:
+            raise TypeError('Input data should be of type list, but found type {}'.format(type(data)))
+        ## Extract Hakkarainen Summary Statistics
+        num_element, timestep = len(data), int(data[0].shape[0]/40)
         result = np.zeros(shape=(num_element,6))
         # Compute statistics
         for ind_element in range(0,num_element):
-            data_ind_element = np.array(data[ind_element])
-            # Mean             
+            # First convert the vector to the 40 dimensional timeseries
+            data_ind_element = data[ind_element].reshape(40,timestep)
+            # Extract Mean
             s1 = np.mean(np.mean(data_ind_element,1))
             # Variance
             s2 = np.mean(np.var(data_ind_element,1))
-            ## Auto Covariance with lag 1
+            ## Extract Auto Covariance with lag 1
             s3 = 0.0
             for ind in range(0,data_ind_element.shape[0]):
                 s3 += self._auto_covariance(data_ind_element[ind,:], lag = 1) 
             s3 = s3/data_ind_element.shape[0]
-            ## Covariance with a neighboring node
+            ## Extract Covariance with a neighboring node
             s4 = 0.0
             for ind in range(0,data_ind_element.shape[0]-1):            
                 s4 += np.mean(data_ind_element[ind,:]*data_ind_element[ind+1,:])\
                     - np.mean(data_ind_element[ind,:])*np.mean(data_ind_element[ind+1,:])
             s4 = s4/data_ind_element.shape[0]
-            ## Cross-Cov with 2 neighbors with time lag 1
+            ## Extract Cross-Cov with 2 neighbors with time lag 1
             s5 = 0.0
             s6 = self._cross_covariance(data_ind_element[1,:],data_ind_element[2,:])
             for ind in range(1,data_ind_element.shape[0]-1):
@@ -50,8 +62,7 @@ class HakkarainenLorenzStatistics(Statistics):
             result[ind_element,:] = [s1, s2, s3, s4, s5, s6] 
             
         # Expand the data with polynomial expansion            
-        result = self._polynomial_expansion(result) 
-                
+        result = self._polynomial_expansion(result)
         return np.array(result)
     
     def _cross_covariance(self, x, y):
@@ -69,10 +80,8 @@ class HakkarainenLorenzStatistics(Statistics):
         numpy.ndarray
             Cross-covariance calculated between x and y.
         """
-        
         return np.mean(np.insert(x,0,1)*np.insert(y,-1,1))-np.mean(np.insert(x,0,1))*np.mean(np.insert(y,-1,1))
-        
-        
+
     def _auto_covariance(self, x, lag = 1):
         """
         Calculate the autocovarriance coefficient of x with lag k.

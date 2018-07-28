@@ -1,8 +1,8 @@
-from abcpy.probabilisticmodels import ProbabilisticModel, Hyperparameter
 import numpy as np
 
+from abcpy.probabilisticmodels import ProbabilisticModel, Continuous, InputConnector
 
-class StochLorenz95(ProbabilisticModel):
+class StochLorenz95(ProbabilisticModel, Continuous):
     """Generates time dependent 'slow' weather variables following forecast model of Wilks [1],
         a stochastic reparametrization of original Lorenz model Lorenz [2].
 
@@ -23,36 +23,76 @@ class StochLorenz95(ProbabilisticModel):
         n_timestep: int, optional
             Number of steps for a time between [0,4], where 4 corresponds to 20 days. The default value is 160 steps.
         """
-    def __init__(self, parameters, initial_state= None, n_timestep=160):
-        super(StochLorenz95, self).__init__(parameters)
-        self.n_timestep = n_timestep
-
-
+    def __init__(self, parameters, name='StochLorenz95'):
+        # Other parameters kept fixed
         # Assign initial state
-        if not initial_state == None:
-            self.initial_state = initial_state
-        else:
-            self.initial_state = np.array([6.4558, 1.1054, -1.4502, -0.1985, 1.1905, 2.3887, 5.6689, 6.7284, 0.9301, \
+        self.initial_state = np.array([6.4558, 1.1054, -1.4502, -0.1985, 1.1905, 2.3887, 5.6689, 6.7284, 0.9301, \
                                            4.4170, 4.0959, 2.6830, 4.7102, 2.5614, -2.9621, 2.1459, 3.5761, 8.1188,
                                            3.7343, 3.2147, 6.3542, \
                                            4.5297, -0.4911, 2.0779, 5.4642, 1.7152, -1.2533, 4.6262, 8.5042, 0.7487,
                                            -1.3709, -0.0520, \
                                            1.3196, 10.0623, -2.4885, -2.1007, 3.0754, 3.4831, 3.5744, 6.5790])
-
-        #Parameter specifying the dimension of the return values of the distribution.
-        self.dimension = len(self.initial_state)
-        # Other parameters kept fixed
         self.F = 10
         self.sigma_e = 1
         self.phi = 0.4
 
+        # We expect input of type parameters = [theta1, theta2, n_timestep]
+        if not isinstance(parameters, list):
+            raise TypeError('Input of StochLorenz95 model is of type list')
 
-    def sample_from_distribution(self, k, rng=np.random.RandomState()):
+        if len(parameters) != 3:
+            raise RuntimeError('Input list must be of length 3, containing [theta1, theta2, n_timestep].')
+
+        input_connector = InputConnector.from_list(parameters)
+        super().__init__(input_connector, name)
+
+
+    def _check_input(self, input_values):
+        # Check whether input has correct type or format
+        if len(input_values) != 3:
+            raise ValueError('Number of parameters of StochLorenz95 model must be 3.')
+
+        # Check whether input is from correct domain
+        theta1 = input_values[0]
+        theta2 = input_values[1]
+        n_timestep = input_values[2]
+
+        if theta1 <= 0 or theta2 <= 0:
+            return False
+
+        return True
+
+
+    def _check_output(self, values):
+        if not isinstance(values[0], np.ndarray):
+            raise ValueError('Output of the normal distribution is always a number.')
+        return True
+
+    def get_output_dimension(self):
+        return 1
+
+    def forward_simulate(self, input_values, k, rng=np.random.RandomState()):
+        # Extract the input parameters
+        theta1 = input_values[0]
+        theta2 = input_values[1]
+        n_timestep = input_values[2]
+
+        # Do the actual forward simulation
+        vector_of_k_samples = self.Lorenz95(theta1, theta2, n_timestep, k)
+        # Format the output to obey API
+        result = [np.array([x]) for x in vector_of_k_samples]
+        return result
+
+
+    def Lorenz95(self, theta1, theta2, n_timestep, k):
+
+        rng = np.random.RandomState()
+
         # Generate n_simulate time-series of weather variables satisfying Lorenz 95 equations
-        timeseries_array = [None] * k
+        result = []
 
         # Initialize timesteps
-        time_steps = np.linspace(0, 4, self.n_timestep)
+        time_steps = np.linspace(0, 4, n_timestep)
 
         for k in range(0, k):
             # Define a parameter object containing parameters which is needed
@@ -61,21 +101,22 @@ class StochLorenz95(ProbabilisticModel):
             eta = self.sigma_e * np.sqrt(1 - pow(self.phi, 2)) * rng.normal(0, 1, self.initial_state.shape[0])
 
             # Initialize the time-series
-            timeseries = np.zeros(shape=(self.initial_state.shape[0], self.n_timestep), dtype=np.float)
+            timeseries = np.zeros(shape=(self.initial_state.shape[0], n_timestep), dtype=np.float)
             timeseries[:, 0] = self.initial_state
             # Compute the timeseries for each time steps
-            for ind in range(0, self.n_timestep - 1):
+            for ind in range(0, n_timestep - 1):
                 # parameters to be supplied to the ODE solver
-                parameter = [eta, np.array(self.get_parameter_values())]
+                parameter = [eta, np.array([theta1, theta2])]
                 # Each timestep is computed by using a 4th order Runge-Kutta solver
                 x = self._rk4ode(self._l95ode_par, np.array([time_steps[ind], time_steps[ind + 1]]), timeseries[:, ind],
                                  parameter)
                 timeseries[:, ind + 1] = x[:, -1]
                 # Update stochastic foring term
                 eta = self.phi * eta + self.sigma_e * np.sqrt(1 - pow(self.phi, 2)) * rng.normal(0, 1)
-            timeseries_array[k] = timeseries
+            result.append(timeseries.flatten())
         # return an array of objects of type Timeseries
-        return [True, np.array(timeseries_array)]
+        return result
+
 
     def _l95ode_par(self, t, x, parameter):
         """
@@ -156,16 +197,3 @@ class StochLorenz95(ProbabilisticModel):
             timeseries[:, ind + 1] = timeseries_initial
         # Return the solved timeseries at the values in timespan
         return timeseries
-
-    def _check_parameters_at_initialization(self, parameters):
-        return True
-
-    def _check_parameters_fixed(self, parameters):
-        return True
-
-    def _check_parameters_before_sampling(self, parameters):
-        return True
-
-    def pdf(self, x):
-        raise NotImplementedError
-
