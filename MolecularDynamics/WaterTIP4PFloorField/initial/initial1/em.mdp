@@ -1,0 +1,31 @@
+define                   = -DFLEXIBLE
+integrator               = steep
+nsteps                   = 10000
+nstcgsteep =100
+emstep      = 0.00000001 
+emtol   = 100.0 
+
+nstenergy                = 2
+nstlog                   = 2
+nstxout-compressed       = 2
+nstxout   = 2        
+nstvout   = 2
+
+
+lincs-order              = 10
+lincs-iter              = 2
+lincs-warnangle          = 30
+
+
+constraint-algorithm     = lincs
+constraints              = h-bonds
+
+cutoff-scheme            = Verlet
+
+coulombtype              = PME
+rcoulomb                 = 1.0
+
+vdwtype                  = Cut-off
+rvdw                     = 1.0
+DispCorr                 = EnerPres
+pbc           = xyz     ; Periodic Boundary Conditions (yes/no)

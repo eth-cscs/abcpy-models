@@ -1,0 +1,64 @@
+; Define can be used to control processes
+
+; Run Parameters 
+integrator = md         ; leap frog integrator
+dt = 0.00004              ; 2 fs timestep
+nsteps = 50000000          ;
+
+; Output Control
+nstxout   = 25         ; save coordinates every 10 ps
+nstvout   = 25         ; save velocities everyg 10 ps
+nstenergy = 25        ; save energies every 10 ps
+nstlog    = 25         ; update log file every 10 ps
+nstxout-compressed = 250 ; save compressed 
+
+compressed-x-grps = System ;
+
+; Bond parameters
+continuation = no       ; continue from NPT position restraint
+constraint_algorithm = lincs 
+constraints = h-bonds ; all bonds constrained
+lincs_iter  = 1
+lincs_order = 4
+
+; Neighbor Lists
+cutoff-scheme = Verlet
+nstlist = 10             ; Frequency to update the neighbor list 10 fs
+ns_type = grid          ; Method to determine neighbor list (simple, grid)
+rcoulomb = 1.0          ; long range electrostatic cut-off
+rvdw = 1.0              ; long range Van der Waals cut-off
+
+; Coulomb interactions
+coulombtype = PME       ; Particle Mesh Ewald 
+fourierspacing = 0.16   ; grid spacing for FFT
+fourier_nx = 0
+fourier_ny = 0
+fourier_nz = 0
+pme_order = 4           ; cubic interpolation
+
+
+tcoupl                   = Nose-Hoover
+tc-grps                  = System
+tau-t                    = 1.0
+ref-t                    = 300
+nhchainlength            = 1
+
+
+; Pressure coupling is on
+Pcoupl = Parrinello-Rahman             ; pressure coupling (NPT)
+Pcoupltype = Isotropic
+tau_p = 2.0
+compressibility = 4.5e-5
+ref_p = 1.0
+refcoord_scaling = com
+
+; Periodic boundary conditions
+pbc = xyz               ; Periodic Boundary Conditions (yes/no)
+
+; Dispersion correction
+DispCorr = EnerPres     ; account for cut-off vdW scheme
+
+; Velocity generation
+gen_vel = yes           ; assign velocities from Maxwell distribution
+gen_temp = 300          ; temperature for Maxwell distribution
+gen_seed = -1           ; generate random seed

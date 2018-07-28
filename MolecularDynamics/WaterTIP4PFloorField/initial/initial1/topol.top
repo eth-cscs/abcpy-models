@@ -1,0 +1,7 @@
+#include "forcefield.itp"
+#include "tip4p.itp"
+
+[ System ]
+TIP4P in water
+
+[ Molecules ] 
