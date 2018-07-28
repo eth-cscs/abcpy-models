@@ -1,6 +1,6 @@
 import numpy as np
 from abcpy.models import Model
-from examples.bastien.param_5.deposition_model import deposition_model
+from model import model
 
 
 class Deposition(Model):
@@ -65,7 +65,7 @@ class Deposition(Model):
         ncol = 5
         mshape = ncol*nrow
         rshape = nrow*ncol*k
-        results = np.reshape(deposition_model(rshape, k, self.pAd, self.pAg, self.pT, self.pF, self.aT, seed),[k,mshape])
+        results = np.reshape(model(rshape, k, self.pAd, self.pAg, self.pT, self.pF, self.aT, seed),[k,mshape])
         result = [None]*k
         for ind in range(k):
             result[ind] = np.reshape(results[ind],[nrow,ncol])
