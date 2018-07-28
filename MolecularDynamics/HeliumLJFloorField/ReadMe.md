@@ -11,5 +11,6 @@ Advanced Scientific Computing Conference (ACM, 2016) p. 4.
 - abcpy0.5.1
 
 ## Setup
-You can run an example ABC inference scheme on Lorenz model by 'python3 HeliumInference.py'
+- You have to fill up the line 109 of Model.py with the address of your LAMMPS executable
+- Then you can run an example ABC inference scheme on Lorenz model by 'python3 HeliumInference.py'
 
