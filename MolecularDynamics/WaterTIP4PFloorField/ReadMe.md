@@ -8,6 +8,7 @@ inference using ABC, we provide summary statistics and distance suggested by Dut
 
 ## Dependencies 
 - abcpy0.5.1
+- GROMACS
 
 ## Setup
 You can run an example ABC inference scheme on Lorenz model by 'python3 WaterInference.py'
