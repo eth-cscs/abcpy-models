@@ -24,7 +24,7 @@ kernel = DefaultKernel([theta1, theta2])
 ######### Inference for simulated data ###############
 water_obs = [np.load('Data/obs_data.npy')]
 
-sampler = APMCABC([water], distance_calculator, backend, kernel, seed = 1)
+sampler = APMCABC([water], [distance_calculator], backend, kernel, seed = 1)
 steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =10, 100, 1, 0.1, 0.03, 2.0, 1, None
 
 print('TIP4P: APMCABC Inferring for simulated data')
@@ -35,7 +35,7 @@ journal_apmcabc.save('Result/MD_GROMACS_APMCABC_obs.jrnl')
 ######### Inference for Experimental data 1 (Neutron Diffraction of Water) ###############
 water_obs = [np.load('Data/exp_data.npy')]
 
-sampler = APMCABC([water], distance_calculator, backend, kernel, seed = 1)
+sampler = APMCABC([water], [distance_calculator], backend, kernel, seed = 1)
 steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =10, 100, 1, 0.1, 0.03, 2.0, 1, None
 
 print('TIP4P: APMCABC Inferring for experimental data 1')
@@ -54,7 +54,7 @@ water = WaterOO([theta1, theta2, 2500000])
 
 water_obs = [np.load('Data/exp_data_2.npy')]
 
-sampler = APMCABC([water], distance_calculator, backend, kernel, seed = 1)
+sampler = APMCABC([water], [distance_calculator], backend, kernel, seed = 1)
 steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =10, 100, 1, 0.1, 0.03, 2.0, 1, None
 
 print('TIP4P: APMCABC Inferring for experimental data 2')

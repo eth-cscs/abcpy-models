@@ -1,0 +1,147 @@
+# MD simulation of He (helium-4)
+
+# MPI version
+
+#echo		screen
+
+#=================================================
+#============= All constants =====================
+
+variable			dim equal 3 # dimension
+
+# Helium mass
+
+variable			m equal 6.646476e-6 # mass (attogram)
+variable			R equal 2077.1488 # Helium gas constant (nm^2/(ns^2*K))
+
+# Thermodynamic state
+
+variable			P equal 101325e-6 # pressure (ag/(nm*ns^2))
+variable			T equal 300 # temperature (Kelvin)
+
+# Helium density for the given TD state
+variable			rho equal 2*($P/($T*$R)) # density from ideal gas law (ag/(nm^3)), will be corrected in simulation
+
+# LJ parameters
+
+# parameters taken from the book Helium Cryogenics by Steven W. Van Sciver, page 63
+variable			sigma equal 0.2556 # nm
+variable			eps equal 0.141 # (ag*nm^2)/(ns^2*K)
+variable			cut equal 2.5*${sigma} # LJ cutoff
+
+# Geometry
+
+variable			ncells equal 10 # number of cells per dimension
+variable			dL equal ($m/${rho})^(1.0/3.0) # length of one cell, nm
+variable			L equal ${dL}*${ncells} # nm
+
+# Random seed
+
+variable k			equal 2 # random seed for velocity
+
+#======== end of constants =============================
+#=======================================================
+
+# Initialization
+
+dimension			${dim}
+units				nano
+atom_style			atomic
+
+# Geometry
+
+lattice				sc ${dL} # 1 atom per cell
+region				box block 0 ${L} 0 ${L} 0 ${L} units box # distance in distance units 
+boundary			p p p # periodic
+create_box			1 box
+
+# Atom definition
+
+create_atoms		1 box
+mass				* $m
+velocity			all create ${T} $k mom yes rot yes dist gaussian # zero linear and angular moments
+
+# Force field
+
+pair_style			lj/cut ${cut}
+pair_coeff			* * ${eps} ${sigma}
+
+# Relaxation process
+
+neighbor			0.1 bin # nm
+neigh_modify		delay 0 every 1 check yes
+
+minimize			0.0 1.0e-8 1000 100000 
+
+#=======================================================
+#=== run npt integration to equilibrate the system =====
+
+# Simulation parameters
+
+variable		dt_npt equal 2e-6 # ns
+variable		steps_npt equal 1e5 # simulation steps
+
+reset_timestep	0
+timestep		${dt_npt}
+
+# Pressure and temperature damping
+
+variable		tdamp equal 1e3*${dt_npt}
+variable		pdamp equal 1e4*${dt_npt}
+
+fix				NPT all npt temp ${T} ${T} ${tdamp} iso $P $P ${pdamp}
+
+thermo_style	custom temp press vol pe etotal density
+thermo			1000
+
+#dump			MOVIE all xyz 100000 ani.xyz
+run				${steps_npt}
+unfix			NPT
+
+#======== end of npt integration ========================
+#========================================================
+
+
+#========================================================
+#======== run nve integration ===========================
+
+# Simulation parameters
+
+variable		dt_nve equal 2e-6 # ns
+variable		steps_nve equal 1e6
+
+reset_timestep	0
+timestep		${dt_nve}
+
+fix             NPT all npt temp ${T} ${T} ${tdamp} iso $P $P ${pdamp}
+#fix			NVE all nve
+
+# Dumping
+
+variable		enth_per_kg equal enthalpy/(atoms*$m) # nm^2/ns^2 = J/kg
+variable		boltz_const equal 0.0138 # ag*nm^2/(ns^2*K)
+variable		boltz_const_pg equal 13.8 # pg*nm^2/(ns^2*K)
+variable		log_boltz_fact equal (-enthalpy/(${boltz_const}*temp)) # 1/ag
+variable		boltz_fact equal exp(-enthalpy/(${boltz_const}*temp)) # 1/ag
+variable		boltz_fact_pg equal exp(-enthalpy/(${boltz_const_pg}*temp)) # 1/pg
+
+thermo_style	custom temp press vol pe etotal v_enth_per_kg v_boltz_fact_pg v_log_boltz_fact v_boltz_fact
+#thermo_modify	norm yes
+thermo			1000
+
+#variable		cluster_cut equal 1.5*${cut}
+#compute			myCluster all cluster/atom 0.5112 # nm
+#dump			Cluster all custom 1000 clusters.txt c_myCluster
+
+#compute		myRDF all rdf 50
+#fix			RDF all ave/time 1 1000000 1000000 c_myRDF file rdf.txt mode vector 
+
+#variable		enth equal enthalpy*2625.5/(${m}) #kJ/Kg
+#variable		pre equal press
+#fix			dumper all print 1000 "${enth} ${pre} ${T}" file out_${T}.dat  screen no
+#
+run				${steps_nve}
+
+#======= end of nve integration ============================
+#===========================================================
+
