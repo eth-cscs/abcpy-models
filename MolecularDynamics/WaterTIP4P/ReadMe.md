@@ -1,4 +1,4 @@
-# TIP4P Water Floor Field Model
+# TIP4P Water Force-Field Model
 The TIP4P model is a force-field of water described in Jorgensen et. al. (1983). To perform 
 inference using ABC, we provide summary statistics and distance suggested by Dutta et al. (2018).
 
