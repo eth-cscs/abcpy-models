@@ -9,6 +9,7 @@ Advanced Scientific Computing Conference (ACM, 2016) p. 4.
 
 ## Dependencies 
 - abcpy0.5.1
+- LAMMPS
 
 ## Setup
 - You have to fill up the line 109 of Model.py with the address of your LAMMPS executable
