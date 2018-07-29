@@ -1,6 +1,6 @@
 # Lorenz 95 Weather prediction model
 The Lorenz model is a modification of the original weather prediction model of Lorenz (1995)
-when fast climate variables are unobserved Wilks (2005). To perform inference using ABC, we provide
+when fast climate variables are unobserved (Wilks (2005)). To perform inference using ABC, we provide
 summar statistics suggested by Hakkarainen et al. (2012).
 
 ## Reference
@@ -15,7 +15,7 @@ Journal of the Royal Meteorological Society, 131(606), 389–407. doi:10.1256/qj
 19(1), 127–143. doi:10.5194/npg-19-127-2012.
 
 ## Dependencies 
-- abcpy0.5.0.1
+- abcpy0.5.1
 
 ## Setup
 You can run an example ABC inference scheme on Lorenz model by 'python3 LorenzInference.py'
