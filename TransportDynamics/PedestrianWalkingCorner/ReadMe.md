@@ -8,4 +8,4 @@ This floor-field model is for simulating Pedestrains' walking throug a corner (L
 - abcpy0.5.1
 
 ## Setup
-You can run an example ABC inference scheme on this model model by 'python3 Inference.py'
+You can run an example ABC inference scheme on this model by running 'python3 Inference.py'
