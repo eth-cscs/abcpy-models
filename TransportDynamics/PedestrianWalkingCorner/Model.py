@@ -330,6 +330,7 @@ class FFSimulator(ProbabilisticModel, Continuous):
 
                 # Move pedestrian and update position, direction and dynamic floor field
                 pedPos = np.zeros((iSize, jSize))
+                pedMoved = np.zeros((iSize,jSize))
                 for i in range(iSize):
                     for j in range(jSize):
                         for n in range(len(pedRes[0][i][j])):
@@ -340,6 +341,8 @@ class FFSimulator(ProbabilisticModel, Continuous):
                             pedDir[pedID] = pedRes[1][i][j][n]
                         if len(pedRes[0][i][j]) > 0:
                             pedPos[i][j] = 1
+                            if abs(pedDir[pedID][0])+abs(pedDir[pedID][1])>0:
+                                pedMoved[i][j] = 1
 
                 # Diffuse and decay dynamic floor field
                 for i in range(iSize):
@@ -360,7 +363,7 @@ class FFSimulator(ProbabilisticModel, Continuous):
                     if tZero == 0:        tZero = simTime
                     repSimulationPos.append(copy.deepcopy(pedPos[0:-3, 0:-3]))
                     repSimulationTime.append(copy.deepcopy(simTime - tZero))
-                    repSimulationHeatmap = repSimulationHeatmap+pedPos[0:-3,0:-3] * (self.meshSize / self.vFree)
+                    repSimulationHeatmap = repSimulationHeatmap+pedMoved[0:-3,0:-3] * (self.meshSize / self.vFree)
             
             #We put repSimulationPos, repSimulationTime and repSimulationHeatmap in a list. It's of size (1, 2+p^2+nt+(p^2)*nt)
             #Notice we would expect all datasets simulated or observed should be stored like this and while computing distance

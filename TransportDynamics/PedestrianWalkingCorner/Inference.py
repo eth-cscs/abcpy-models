@@ -3,7 +3,7 @@ from abcpy.continuousmodels import Uniform
 from abcpy.discretemodels import Binomial
 from Model import FFSimulator, DiscreteUniform
 
-
+# Some comment
 # Define Graphical Model
 bufferRatio = Uniform([[0], [10]], name='bufferratio')
 bufferAngle = DiscreteUniform([[45],[90]], name='bufferAngle')
@@ -16,8 +16,8 @@ ff = FFSimulator([bufferRatio, bufferAngle, kW, kS, kD, decay, diffusion], name 
 
 # Example to Generate Data to check it's correct
 fftry = FFSimulator([8.2, 50, 3.2, 4.1, 1.1, .3, .1], name = 'fftry')
-resultfakeobs1 = fftry.forward_simulate([8.2, 50, 3.2, 4.1, 1.1, .3, .1], 1)
-resultfakeobs2 = fftry.forward_simulate([9.2, 50, 3.2, 4.1, 1.1, .3, .1], 1)
+resultfakeobs1 = fftry.forward_simulate([8.2, 50, 3.2, 4.1, 1.1, .3, .1], 10)
+resultfakeobs2 = fftry.forward_simulate([9.2, 50, 3.2, 4.1, 1.1, .3, .1], 10)
 
 print('# Check the datasets are different')
 print(np.mean(resultfakeobs1[0]))

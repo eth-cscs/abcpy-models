@@ -1,5 +1,6 @@
 from abcpy.distances import Distance
 import copy
+import math
 import numpy as np
 
 class DistanceType1(Distance):
@@ -16,7 +17,7 @@ class DistanceType1(Distance):
         #  summary statistics of them and not recalculate it each time
         self.s1 = None
         self.data_set = None
-
+        
     def distance(self, d1, d2):
         """Calculates the distance between two datasets.
 
@@ -29,9 +30,13 @@ class DistanceType1(Distance):
             raise TypeError('Data is not of allowed types')
         if not isinstance(d2, list):
             raise TypeError('Data is not of allowed types')
+        
+        # Distance main algorithm
+        def single_distance(obsHeatmap,simHeatmap):
+            return abs(sum(sum(pow(obsHeatmap - simHeatmap,2))))
 
         # Extract summary statistics from the dataset
-        if (self.s1 is None or self.data_set != d1):
+        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
             self.s1 = self.statistics_calc.statistics(d1)
             self.data_set = d1
         s2 = self.statistics_calc.statistics(d2)
@@ -67,19 +72,211 @@ class DistanceType1(Distance):
         
         ## ACTUALLY COMPUTE DISTANCE
         # Compute distance using heatmap
-        tempDistance = np.zeros((1,simRep))
+        tempDistance = 0
         for simNumber in range(simRep):
-            diffMatrix = np.zeros((nCells,nCells))
             for obsNumber in range(obsRep):
-                diffMatrix = diffMatrix+abs(sum(sum(pow(resSimulationHeatmap[simNumber]-resObservationHeatmap[obsNumber],2))))
-            tempDistance[0,simNumber] = diffMatrix.sum()/(nCells**2 * obsRep)
-        return np.mean(tempDistance)
+                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
+        return tempDistance/(nCells**2 * simRep * obsRep)
+
+    def dist_max(self):
+        return np.inf
+        
+class DistanceType2(Distance):
+    """
+    This class implements the Euclidean distance between two vectors.
+
+    The maximum value of the distance is np.inf.
+    """
+
+    def __init__(self, statistics):
+        self.statistics_calc = statistics
+
+        # Since the observations do always stay the same, we can save the
+        #  summary statistics of them and not recalculate it each time
+        self.s1 = None
+        self.data_set = None
+        
+    def distance(self, d1, d2):
+        """Calculates the distance between two datasets.
+
+        Parameters
+        ----------
+        d1, d2: list
+            A list, containing a list describing the data set
+        """
+        if not isinstance(d1, list):
+            raise TypeError('Data is not of allowed types')
+        if not isinstance(d2, list):
+            raise TypeError('Data is not of allowed types')
+        
+        # Distance main algorithm
+        def single_distance(obsHeatmap,simHeatmap):
+            resObsSorted = np.sort(np.reshape(obsHeatmap, (1, obsHeatmap.shape[0] * obsHeatmap.shape[1])))
+            resSimSorted = np.sort(np.reshape(simHeatmap, (1, simHeatmap.shape[0] * simHeatmap.shape[1])))
+            return sum(sum(pow(resObsSorted-resSimSorted, 2)))
+
+        # Extract summary statistics from the dataset
+        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
+            self.s1 = self.statistics_calc.statistics(d1)
+            self.data_set = d1
+        s2 = self.statistics_calc.statistics(d2)
+
+        ## EXTRACT MATRICES FROM LIST
+        obsRep, simRep = len(self.s1), len(s2)
+
+        # Observation
+        resObservationHeatmap = []
+        for repi in range(obsRep):
+            # Extract fundamental information
+            nCells = int(self.s1[repi,1])
+            # Extract observation heat map
+            repObservationHeatmap = np.zeros((nCells,nCells))
+            for i in range(nCells):
+                index = 2 + i*nCells
+                repObservationHeatmap[i,:] = self.s1[repi,index:index+nCells]
+            # Add to global quantities
+            resObservationHeatmap.append(copy.deepcopy(repObservationHeatmap))
+        
+        # Simulation
+        resSimulationHeatmap = []
+        for repi in range(simRep):
+            # Extract fundamental information
+            nCells = int(s2[repi,1])
+            # Extract simulation heat map
+            repSimulationHeatmap = np.zeros((nCells,nCells))
+            for i in range(nCells):
+                index = 2 + i*nCells
+                repSimulationHeatmap[i,:] = s2[repi,index:index+nCells]    
+            # Add to global quantities
+            resSimulationHeatmap.append(copy.deepcopy(repSimulationHeatmap))
+        
+        ## ACTUALLY COMPUTE DISTANCE
+        # Compute distance using heatmap
+        tempDistance = 0
+        for simNumber in range(simRep):
+            for obsNumber in range(obsRep):
+                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
+        return tempDistance/(nCells**2 * simRep * obsRep)
+
+    def dist_max(self):
+        return np.inf
+        
+class DistanceType3(Distance):
+    """
+    This class implements the Euclidean distance between two vectors.
+
+    The maximum value of the distance is np.inf.
+    """
+
+    def __init__(self, statistics):
+        self.statistics_calc = statistics
+
+        # Since the observations do always stay the same, we can save the
+        #  summary statistics of them and not recalculate it each time
+        self.s1 = None
+        self.data_set = None
+        
+    def distance(self, d1, d2):
+        """Calculates the distance between two datasets.
+
+        Parameters
+        ----------
+        d1, d2: list
+            A list, containing a list describing the data set
+        """
+        if not isinstance(d1, list):
+            raise TypeError('Data is not of allowed types')
+        if not isinstance(d2, list):
+            raise TypeError('Data is not of allowed types')
+        
+        # Distance main algorithm
+        def single_distance(obsHeatmap,simHeatmap):
+            # Sort elements and get unique values
+            resObsSorted = np.sort(np.reshape(obsHeatmap, (1, obsHeatmap.shape[0] * obsHeatmap.shape[1])))
+            resSimSorted = np.sort(np.reshape(simHeatmap, (1, simHeatmap.shape[0] * simHeatmap.shape[1])))
+            resObsElements = np.unique(resObsSorted)
+            resSimElements = np.unique(resSimSorted)
+            
+            # Determine which matrix has most steps
+            highIndex = np.array([resObsElements.shape[0],resSimElements.shape[0]]).argmax()
+            if highIndex==0:    highArray, highElements, lowArray = obsHeatmap, resObsElements, simHeatmap
+            else:               highArray, highElements, lowArray = simHeatmap, resSimElements, obsHeatmap
+            
+            distanceValue = 0
+            for highValue in highElements:
+                # Look for areas with same level in highArray and find closest height in lowArray
+                highIndex, diff = [], 1E+10
+                for i in range(highArray.shape[0]):
+                    for j in range(highArray.shape[1]):
+                        if highArray[i,j]==highValue:
+                            highIndex.append(np.array([i,j]))
+                        if abs(highValue-lowArray[i,j])<diff:
+                            lowValue = lowArray[i,j]
+                            diff = abs(highValue-lowArray[i,j])
+                # Look for areas with similar level in lowArray
+                lowIndex = []
+                for i in range(lowArray.shape[0]):
+                    for j in range(lowArray.shape[1]):
+                        if lowArray[i,j]==lowValue:
+                            lowIndex.append(np.array([i,j]))
+                # Compute minimum distance between similar areas
+                dist = 1E+10
+                for i in range(len(lowIndex)):
+                    for j in range(len(highIndex)):
+                        diff = lowIndex[i]-highIndex[j]
+                        if math.sqrt(diff[0]**2+diff[1]**2)<dist:
+                            dist = math.sqrt(diff[0]**2+diff[1]**2)
+                # Compute final distance
+                distanceValue += abs(highValue-lowValue)*dist
+            return distanceValue
+
+        # Extract summary statistics from the dataset
+        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
+            self.s1 = self.statistics_calc.statistics(d1)
+            self.data_set = d1
+        s2 = self.statistics_calc.statistics(d2)
+
+        ## EXTRACT MATRICES FROM LIST
+        obsRep, simRep = len(self.s1), len(s2)
+
+        # Observation
+        resObservationHeatmap = []
+        for repi in range(obsRep):
+            # Extract fundamental information
+            nCells = int(self.s1[repi,1])
+            # Extract observation heat map
+            repObservationHeatmap = np.zeros((nCells,nCells))
+            for i in range(nCells):
+                index = 2 + i*nCells
+                repObservationHeatmap[i,:] = self.s1[repi,index:index+nCells]
+            # Add to global quantities
+            resObservationHeatmap.append(copy.deepcopy(repObservationHeatmap))
+        
+        # Simulation
+        resSimulationHeatmap = []
+        for repi in range(simRep):
+            # Extract fundamental information
+            nCells = int(s2[repi,1])
+            # Extract simulation heat map
+            repSimulationHeatmap = np.zeros((nCells,nCells))
+            for i in range(nCells):
+                index = 2 + i*nCells
+                repSimulationHeatmap[i,:] = s2[repi,index:index+nCells]    
+            # Add to global quantities
+            resSimulationHeatmap.append(copy.deepcopy(repSimulationHeatmap))
+        
+        ## ACTUALLY COMPUTE DISTANCE
+        # Compute distance using heatmap
+        tempDistance = 0
+        for simNumber in range(simRep):
+            for obsNumber in range(obsRep):
+                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
+        return tempDistance/(nCells**2 * simRep * obsRep)
 
     def dist_max(self):
         return np.inf
 
-
-class DistanceType2(Distance):
+class DistanceType4(Distance):
     """
     This class implements the Euclidean distance between two vectors.
 
@@ -108,7 +305,7 @@ class DistanceType2(Distance):
             raise TypeError('Data is not of allowed types')
 
         # Extract summary statistics from the dataset
-        if (self.s1 is None or self.data_set != d1):
+        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
             self.s1 = self.statistics_calc.statistics(d1)
             self.data_set = d1
         s2 = self.statistics_calc.statistics(d2)
