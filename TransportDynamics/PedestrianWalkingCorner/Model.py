@@ -23,6 +23,7 @@ class FFSimulator(ProbabilisticModel, Continuous):
         self.startArea = 16                 # starting area (m2)
 
         # Internal settings and options (determine details of the simulation)
+        self.staticFFtype = 2           # type of static floor field (1 = block type, 2 = simple Nishinari)
         self.meshSize = 0.4             # mesh size (m)
         self.allowStop = 0              # allow stopping (if 0 stopping not allowed)
         self.motionLogic = 0            # consider priorities in deciding movements (right vs. left,...)
@@ -136,46 +137,60 @@ class FFSimulator(ProbabilisticModel, Continuous):
                 dist = (iSize - i) ** 2 + (jSize - j) ** 2
                 if dist > maxDistCenter and floorMap[i][j] == 0:        maxDistCenter, iCenter, jCenter = dist, i, j
                 if dist > maxDistCorner and floorMap[i][j] == 1:        maxDistCorner, iCorner, jCorner = dist, i, j
+        
+        
+        # Static Floor Field using the block approach by Li et al.           
+        if self.staticFFtype == 1:
+            # Create floor map for final approach (last straight part)
+            staticFF = np.zeros((iSize, jSize))
+            for i in range(iSize - 1, 0, -1):
+                if i >= iCenter:      staticFF[i, 1:corrWidth + 1] = iSize - i - 1
+    
+            # Create radial map for turning point (central part with curve)
+            startValue = np.amax(staticFF)
+            for i in range(iSize):
+                for j in range(jSize):
+                    if i < iCenter and j < jCenter and i > 0 and j > 0:
+                        angle = math.atan2((i - iCenter) * self.meshSize, (jCenter - j) * self.meshSize)
+                        staticFF[i][j] = abs(angle * (corrWidth / (math.pi / 2))) + startValue
 
-        # Create floor map for final approach (last straight part)
-        staticFF = np.zeros((iSize, jSize))
-        for i in range(iSize - 1, 0, -1):
-            if i >= iCenter:      staticFF[i, 1:corrWidth + 1] = iSize - i - 1
+            # Create deflection before turning (according to Li et al., Physica A 432 (2015) 337–353)
+            bufferCells, slope = round(bufferRatio * corrWidth), math.tan(abs(bufferAngle - 90) * (math.pi / 180))
+    
+            def getDistance(slope, i, j):
+                return abs(iCenter - slope * jCenter + slope * j - i) / math.sqrt(1 + slope ** 2)
+    
+            minDist, maxDist = getDistance(slope, iCenter - 1, jCenter), getDistance(slope, iCenter - corrWidth,
+                                                                                     jCenter + bufferCells - 1)
+            for i in range(iSize):
+                for j in range(jSize):
+                    if i < iCenter and i > 0 and j >= jCenter and j < jCenter + bufferCells:
+                        bufferValue = getDistance(slope, i, j)
+                        staticFF[i, j] = (bufferValue - minDist) * (
+                        bufferCells / (maxDist - minDist)) + jSize - jCenter + corrWidth - 2
+    
+            # Create floor map for initial approach (initial straight section)
+            startValue = np.amax(staticFF) - jCenter - bufferCells + 1
+            for j in range(jCenter, jSize):
+                if j >= jCenter + bufferCells:      staticFF[1:corrWidth + 1, j] = startValue + j
 
-        # Create radial map for turning point (central part with curve)
-        startValue = np.amax(staticFF)
-        for i in range(iSize):
-            for j in range(jSize):
-                if i < iCenter and j < jCenter and i > 0 and j > 0:
-                    angle = math.atan2((i - iCenter) * self.meshSize, (jCenter - j) * self.meshSize)
-                    staticFF[i][j] = abs(angle * (corrWidth / (math.pi / 2))) + startValue
-
-        # Create deflection before turning (according to Li et al., Physica A 432 (2015) 337–353)
-        bufferCells, slope = round(bufferRatio * corrWidth), math.tan(abs(bufferAngle - 90) * (math.pi / 180))
-
-        def getDistance(slope, i, j):
-            return abs(iCenter - slope * jCenter + slope * j - i) / math.sqrt(1 + slope ** 2)
-
-        minDist, maxDist = getDistance(slope, iCenter - 1, jCenter), getDistance(slope, iCenter - corrWidth,
-                                                                                 jCenter + bufferCells - 1)
-        for i in range(iSize):
-            for j in range(jSize):
-                if i < iCenter and i > 0 and j >= jCenter and j < jCenter + bufferCells:
-                    bufferValue = getDistance(slope, i, j)
-                    staticFF[i, j] = (bufferValue - minDist) * (
-                    bufferCells / (maxDist - minDist)) + jSize - jCenter + corrWidth - 2
-
-        # Create floor map for initial approach (initial straight section)
-        startValue = np.amax(staticFF) - jCenter - bufferCells + 1
-        for j in range(jCenter, jSize):
-            if j >= jCenter + bufferCells:      staticFF[1:corrWidth + 1, j] = startValue + j
-
-        # Normalize to have only integer values
-        allData = staticFF.flatten()
-        setValues = sorted(set(allData))
-        for i in range(iSize):
-            for j in range(jSize):
-                staticFF[i, j] = setValues.index(staticFF[i, j])
+            # Normalize to have only integer values
+            allData = staticFF.flatten()
+            setValues = sorted(set(allData))
+            for i in range(iSize):
+                for j in range(jSize):
+                    staticFF[i, j] = setValues.index(staticFF[i, j])
+        
+        # Static Floor Field using a simple approach by Nishinari         
+        if self.staticFFtype == 2:
+            # Create floor map for last straight section and corner
+            staticFF = np.zeros((iSize,jSize))
+            for i in range(iSize-1,0,-1):
+                if i>=1:        staticFF[i,1:corrWidth+1] = iSize-i-1
+                    
+            # Create floor map for first straight section
+            for j in range(1,jSize):
+                if staticFF[1,j]==0:    staticFF[1:corrWidth+1,j] = staticFF[1:corrWidth+1,j-1]+1
 
         # Compute wall floor field (Nishinari et al., IEICE Transactions on information and systems 87.3, 726-732)
         wallFF = np.zeros((iSize, jSize))
