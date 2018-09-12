@@ -20,15 +20,16 @@ class FFSimulator(ProbabilisticModel, Continuous):
         # Constants (related to experimental conditions, known a priori)
         self.maxPed = 16                    # number of pedestrians (whole group)
         self.vFree = 1.4                    # free walking speed (m/s)
-        self.startArea = 16                 # starting area (m2)
+        self.startSurface = 16              # starting area (m2)
 
         # Internal settings and options (determine details of the simulation)
+        self.entranceType = 2           # method used to introduce pedestrians (1 = set flow, 2 = use waiting area)
         self.staticFFtype = 2           # type of static floor field (1 = block type, 2 = simple Nishinari)
         self.meshSize = 0.4             # mesh size (m)
         self.allowStop = 0              # allow stopping (if 0 stopping not allowed)
         self.motionLogic = 0            # consider priorities in deciding movements (right vs. left,...)
         self.maxInflowIter = 100        # iteration limits for inflow (avoid being stuck in a while loop)
-        self.maxSimulationTime = 30     # time limit for simulation (s) (in case simulation get stuck due to odd parameter's choice)
+        self.maxSimulationTime = 60     # time limit for simulation (s) (in case simulation get stuck due to odd parameter's choice)
 
         # We expect input of type parameters = [theta1, theta2, n_timestep]
         if not isinstance(parameters, list):
@@ -120,24 +121,35 @@ class FFSimulator(ProbabilisticModel, Continuous):
         #              1 is walkable area           -2 is exit             (it is used to directly push people to the exit)
 
         # Read floor map and determine section dimension and corridor width
-        floorMap = np.array(list(csv.reader(open("floor_map/Lcorner.csv"), delimiter=","))).astype("float")
-        (iSize, jSize) = floorMap.shape
-        entranceLocation = [math.inf, 0]
-        for i in range(iSize):
-            if floorMap[i][jSize - 1] == -1:
-                entranceLocation[0] = min([i, entranceLocation[0]]);
-                entranceLocation[1] = max([i, entranceLocation[1]])
-        corrWidth = entranceLocation[1] - entranceLocation[0] + 1
+        if self.entranceType==1:
+            floorMap = np.array(list(csv.reader(open("floor_map/Lcorner.csv"), delimiter=","))).astype("float")
+            (iSize, jSize) = floorMap.shape
+            entranceLocation = [math.inf, 0]
+            for i in range(iSize):
+                if floorMap[i][jSize - 1] == -1:
+                    entranceLocation[0] = min([i, entranceLocation[0]]);
+                    entranceLocation[1] = max([i, entranceLocation[1]])
+            corrWidth = entranceLocation[1] - entranceLocation[0] + 1
+            
+        if self.entranceType==2:
+            floorMap = np.array(list(csv.reader(open("floor_map/Lcorner_long.csv"), delimiter=","))).astype("float")
+            (iSize,jSize) = floorMap.shape
+            corrWidth = int(abs(sum(floorMap[:,-1])))
+            startArea = [[iSize,0],[jSize,0]]
+            for i in range(iSize):
+                for j in range(jSize):
+                    if floorMap[i,j]==-1:
+                        if startArea[0][0]>i:  startArea[0][0] = i
+                        if startArea[0][1]<i:  startArea[0][1] = i
+                        if startArea[1][0]>j:  startArea[1][0] = j
+                        if startArea[1][1]<j:  startArea[1][1] = j
 
         # Determine location of turning point
-        maxDistCenter, maxDistCorner = 0, 0
-        iCenter, jCenter, iCorner, jCorner = 0, 0, 0, 0
+        maxDistCenter, iCenter, jCenter = 0, 0, 0
         for i in range(iSize - 1, 0, -1):
             for j in range(jSize - 1, 0, -1):
                 dist = (iSize - i) ** 2 + (jSize - j) ** 2
                 if dist > maxDistCenter and floorMap[i][j] == 0:        maxDistCenter, iCenter, jCenter = dist, i, j
-                if dist > maxDistCorner and floorMap[i][j] == 1:        maxDistCorner, iCorner, jCorner = dist, i, j
-        
         
         # Static Floor Field using the block approach by Li et al.           
         if self.staticFFtype == 1:
@@ -183,14 +195,20 @@ class FFSimulator(ProbabilisticModel, Continuous):
         
         # Static Floor Field using a simple approach by Nishinari         
         if self.staticFFtype == 2:
-            # Create floor map for last straight section and corner
+            # Create floor map for last straight section
             staticFF = np.zeros((iSize,jSize))
             for i in range(iSize-1,0,-1):
-                if i>=1:        staticFF[i,1:corrWidth+1] = iSize-i-1
+                if i>=1:        staticFF[i,1:corrWidth+1] = iSize-i-1     
                     
             # Create floor map for first straight section
             for j in range(1,jSize):
-                if staticFF[1,j]==0:    staticFF[1:corrWidth+1,j] = staticFF[1:corrWidth+1,j-1]+1
+                if staticFF[1,j]==0:    staticFF[1:corrWidth+1,j] = staticFF[iCenter-1,jCenter-1]+(j-jCenter)
+                    
+            # Create floor field for corner section
+            for i in range(corrWidth):
+                for j in range(corrWidth):
+                    if i>=j:
+                        staticFF[iCenter-i-1,jCenter+j] += i-j
 
         # Compute wall floor field (Nishinari et al., IEICE Transactions on information and systems 87.3, 726-732)
         wallFF = np.zeros((iSize, jSize))
@@ -205,12 +223,12 @@ class FFSimulator(ProbabilisticModel, Continuous):
                                 if dist < minDist:    minDist = dist
                     wallFF[i][j] = minDist
 
-        minExp, maxExp = math.log(sys.float_info.min), math.log(sys.float_info.max)
+        minExp, maxExp = math.log(sys.float_info.min*5), math.log(sys.float_info.max/5)
 
-        def compProb(sFF, dFF, wFF):
-            exponent = -kS * sFF + kD * dFF + kW * wFF
+        def compProb(sFFcenter, sFF, dFF, wFF):
+            exponent = -kS * (sFF - sFFcenter) + kD * dFF + kW * wFF
             if exponent > minExp and exponent < maxExp:
-                return math.exp(-kS * sFF + kD * dFF + kW * wFF)
+                return math.exp(-kS * (sFF - sFFcenter) + kD * dFF + kW * wFF)
             elif exponent < minExp:
                 return math.exp(minExp)
             elif exponent > maxExp:
@@ -223,28 +241,46 @@ class FFSimulator(ProbabilisticModel, Continuous):
             
             # Initialize variables (relative to single execution)
             repSimulationPos, repSimulationTime = [], []
-            pedPos, repSimulationHeatmap = np.zeros((iSize, jSize)), np.zeros((iSize-3,jSize-3))
+            pedPos, repSimulationHeatmap = np.zeros((iSize, jSize)), np.zeros((iSize-3,iSize-3))
             dynamicFF = np.zeros((iSize, jSize))
             pedList, pedDir = [], []
             numPed, inTime, simTime, tZero = 0, 0, 0, 0
+            
+            # Place pedestrians in starting area
+            if self.entranceType==2:
+                while (numPed < self.maxPed):
+                    m, n = rand.randint(startArea[0][0],startArea[0][1]), rand.randint(startArea[1][0],startArea[1][1])
+                    if pedPos[m,n]==0:
+                        pedPos[m][n] = 1
+                        numPed = numPed + 1
+                        pedList.append([m,n])
+                        pedDir.append([0,-1])
 
             # Internal simulation loop (single run)
-            while ((numPed < self.maxPed) or (len(pedList) > 0)) and (simTime < self.maxSimulationTime):
-                # Inject pedestrians if required
-                if numPed < self.maxPed:
-                    warningCounter = 0
-                    while (numPed < self.vFree * corrWidth * self.meshSize * (self.maxPed / self.startArea) * (simTime - inTime)):
-                        m, n = rand.randint(entranceLocation[0], entranceLocation[1]), jSize - 1
-                        if pedPos[m][n] == 0:
-                            pedPos[m][n] = 1
-                            numPed = numPed + 1
-                            pedList.append([m, n])
-                            pedDir.append([0, -1])
-                        if numPed == 1:
-                            inTime = simTime
-                        warningCounter = warningCounter + 1
-                        if warningCounter > self.maxInflowIter:      numPed = numPed + 1
+            maxTime = self.maxSimulationTime - (self.meshSize/self.vFree)
+            while ((numPed < self.maxPed) or (len(pedList) > 0)) and (simTime-inTime < maxTime):
+                
+                # Inject pedestrians if required (entrance by inflow value)
+                if self.entranceType==1:
+                    if numPed < self.maxPed:
+                        warningCounter = 0
+                        while (numPed < self.vFree * corrWidth * self.meshSize * (self.maxPed / self.startSurface) * (simTime - inTime)):
+                            m, n = rand.randint(entranceLocation[0], entranceLocation[1]), jSize - 1
+                            if pedPos[m][n] == 0:
+                                pedPos[m][n] = 1
+                                numPed = numPed + 1
+                                pedList.append([m, n])
+                                pedDir.append([0, -1])
+                            if numPed == 1:
+                                inTime = simTime
+                            warningCounter = warningCounter + 1
+                            if warningCounter > self.maxInflowIter:      numPed = numPed + 1
 
+                 # Define starting time for starting area setup
+                if self.entranceType==2:
+                    if sum(pedPos[:,iSize])>1 and inTime==0:
+                        inTime = simTime                
+                
                 # Remove pedestrians if required
                 remPed = []
                 for pedID in range(len(pedList)):
@@ -261,8 +297,8 @@ class FFSimulator(ProbabilisticModel, Continuous):
                     # Extract local floor fields and prepare data for transition probability calculation
                     I, J = pedList[pedID][0], pedList[pedID][1]
                     localMap = [None] * 3
-                    localMap[0] = compProb(staticFF[I - 1:I + 2, J - 1:J + 2], dynamicFF[I - 1:I + 2, J - 1:J + 2],
-                                           wallFF[I - 1:I + 2, J - 1:J + 2])
+                    localMap[0] = compProb(staticFF[I, J], staticFF[I - 1:I + 2, J - 1:J + 2], 
+                                           dynamicFF[I - 1:I + 2, J - 1:J + 2], wallFF[I - 1:I + 2, J - 1:J + 2])
                     localMap[1], localMap[2] = pedPos[I - 1:I + 2, J - 1:J + 2], floorMap[I - 1:I + 2, J - 1:J + 2]
                     for n in range(len(localMap)):
                         if J == jSize - 1:
@@ -286,6 +322,7 @@ class FFSimulator(ProbabilisticModel, Continuous):
                             if localMap[2][i][j] == 0:                            localMap[0][i][
                                 j] = 0  # exclude inacessible locations
                     totalValue = sum(sum(localMap[0]))
+                    transProb = np.zeros((3,3))
                     if totalValue > 0:    transProb = localMap[0] / totalValue  # compute transition probability
 
                     # Determine maximum values and relative index (also for tied cases)
@@ -321,11 +358,12 @@ class FFSimulator(ProbabilisticModel, Continuous):
                         m, n = 1, 1  # special case where transition probability is 0 everywhere
 
                     # Reserve position
-                    pedRes[0][I + (m - 1)][J + (n - 1)].append(pedID)
-                    if floorMap[I + (m - 1)][J + (n - 1)] == 2:
-                        pedRes[1][I + (m - 1)][J + (n - 1)].append([dI, dJ])
-                    else:
-                        pedRes[1][I + (m - 1)][J + (n - 1)].append([m - 1, n - 1])
+                    if I + (m - 1) >= 0 and I + (m - 1) < iSize and J + (n - 1) >= 0 and J + (n - 1) < jSize:
+                        pedRes[0][I + (m - 1)][J + (n - 1)].append(pedID)
+                        if floorMap[I + (m - 1)][J + (n - 1)] == 2:
+                            pedRes[1][I + (m - 1)][J + (n - 1)].append([dI, dJ])
+                        else:
+                            pedRes[1][I + (m - 1)][J + (n - 1)].append([m - 1, n - 1])
 
                 # Resolve conflicts (in areas with floorMap==2 conflics are possible to avoid congestion near exit)
                 for i in range(iSize):
@@ -351,11 +389,11 @@ class FFSimulator(ProbabilisticModel, Continuous):
                         for n in range(len(pedRes[0][i][j])):
                             pedID = pedRes[0][i][j][n]
                             I, J = pedList[pedID][0], pedList[pedID][1]
-                            dynamicFF[I][J] = dynamicFF[I][J] + 1
                             pedList[pedID] = [i, j]
                             pedDir[pedID] = pedRes[1][i][j][n]
                         if len(pedRes[0][i][j]) > 0:
                             pedPos[i][j] = 1
+                            dynamicFF[I][J] = dynamicFF[I][J] + 1
                             if abs(pedDir[pedID][0])+abs(pedDir[pedID][1])>0:
                                 pedMoved[i][j] = 1
 
@@ -367,18 +405,21 @@ class FFSimulator(ProbabilisticModel, Continuous):
                                 dynamicFF[i][j] = dynamicFF[i][j] - 1
                             if dynamicFF[i][j] > 0 and rand.uniform(0, 1) < diffusion:
                                 dynamicFF[i][j] = dynamicFF[i][j] - 1
-                                dI = int(np.sign(rand.uniform(-1, 1)))
-                                dJ = int(np.sign(rand.uniform(-1, 1)))
-                                if i + dI < iSize and j + dJ < jSize:
+                                index = rand.randint(0,1)
+                                if index==0:
+                                    dI, dJ = int(np.sign(rand.uniform(-1, 1))), 0
+                                elif index==1:
+                                    dI, dJ = 0, int(np.sign(rand.uniform(-1, 1)))
+                                if i + dI < iSize and j + dJ < jSize and floorMap[i + dI][j + dJ]!=0:
                                     dynamicFF[i + dI][j + dJ] = dynamicFF[i + dI][j + dJ] + 1
 
                 # Store data for current iteration
                 simTime = simTime + (self.meshSize / self.vFree)
-                if sum(sum(pedPos[0:-3, 0:-1])) > 0:
+                if sum(sum(pedPos[0:iSize-3, 0:iSize-3])) > 0 and simTime <= maxTime:
                     if tZero == 0:        tZero = simTime
-                    repSimulationPos.append(copy.deepcopy(pedPos[0:-3, 0:-3]))
+                    repSimulationPos.append(copy.deepcopy(pedPos[0:iSize-3, 0:iSize-3]))
                     repSimulationTime.append(copy.deepcopy(simTime - tZero))
-                    repSimulationHeatmap = repSimulationHeatmap+pedMoved[0:-3,0:-3] * (self.meshSize / self.vFree)
+                    repSimulationHeatmap = repSimulationHeatmap+pedMoved[0:iSize-3, 0:iSize-3] * (self.meshSize / self.vFree)       
             
             #We put repSimulationPos, repSimulationTime and repSimulationHeatmap in a list. It's of size (1, 2+p^2+nt+(p^2)*nt)
             #Notice we would expect all datasets simulated or observed should be stored like this and while computing distance

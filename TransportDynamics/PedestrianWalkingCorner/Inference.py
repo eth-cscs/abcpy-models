@@ -5,13 +5,13 @@ from Model import FFSimulator, DiscreteUniform
 
 # Some comment
 # Define Graphical Model
-bufferRatio = Uniform([[0], [10]], name='bufferratio')
-bufferAngle = DiscreteUniform([[45],[90]], name='bufferAngle')
 kW = Uniform([[0], [10]], name='kW')
 kS = Uniform([[0], [10]], name='kS')
 kD = Uniform([[0], [10]], name='kD')
 decay = Uniform([[0], [1]], name='decay')
 diffusion = Uniform([[0], [1]], name='diffusion')
+bufferRatio = Uniform([[0], [10]], name='bufferratio')
+bufferAngle = DiscreteUniform([[45],[90]], name='bufferAngle')
 ff = FFSimulator([bufferRatio, bufferAngle, kW, kS, kD, decay, diffusion], name = 'ff')
 
 # Example to Generate Data to check it's correct
@@ -19,12 +19,12 @@ fftry = FFSimulator([8.2, 50, 3.2, 4.1, 1.1, .3, .1], name = 'fftry')
 resultfakeobs1 = fftry.forward_simulate([8.2, 50, 3.2, 4.1, 1.1, .3, .1], 10)
 resultfakeobs2 = fftry.forward_simulate([9.2, 50, 3.2, 4.1, 1.1, .3, .1], 10)
 
-print('# Check the datasets are different')
-print(np.mean(resultfakeobs1[0]))
-print(np.mean(resultfakeobs2[0]))
+# Check the datasets are different
+if np.mean(resultfakeobs1[0])==np.mean(resultfakeobs2[0]):
+    print('Datasets are not different!')
   
 # Define backend
-from abcpy.backends import BackendDummy as Backend
+from abcpy.backends import BackendMPI as Backend
 backend = Backend()
 
 # Define Statistics
@@ -35,10 +35,9 @@ statistics_calculator = Identity(degree=1, cross=False)
 from Distance import DistanceType1
 distance_calculator = DistanceType1(statistics_calculator)
 
-print('# Check whether the distance works')
-print(distance_calculator.distance(resultfakeobs1, resultfakeobs1))
-print(distance_calculator.distance(resultfakeobs1, resultfakeobs2))
-
+# Check whether the distance works
+if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
+    print('Something may be wrong with the distance!')
 
 # Define kernel
 from abcpy.perturbationkernel import MultivariateNormalKernel, RandomWalkKernel, JointPerturbationKernel
