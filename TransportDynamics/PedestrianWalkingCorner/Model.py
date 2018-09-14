@@ -23,8 +23,8 @@ class FFSimulator(ProbabilisticModel, Continuous):
         self.startSurface = 16              # starting area (m2)
 
         # Internal settings and options (determine details of the simulation)
-        self.entranceType = 2           # method used to introduce pedestrians (1 = set flow, 2 = use waiting area)
-        self.staticFFtype = 2           # type of static floor field (1 = block type, 2 = simple Nishinari)
+        self.entranceType = 1           # method used to introduce pedestrians (1 = set flow, 2 = use waiting area)
+        self.staticFFtype = 1           # type of static floor field (1 = block type, 2 = simple Nishinari)
         self.meshSize = 0.4             # mesh size (m)
         self.allowStop = 0              # allow stopping (if 0 stopping not allowed)
         self.motionLogic = 0            # consider priorities in deciding movements (right vs. left,...)
@@ -60,7 +60,7 @@ class FFSimulator(ProbabilisticModel, Continuous):
             print('bufferRatio is not of correct type or out of range')
             return False
 
-        if not isinstance(bufferAngle, (int, np.int64, np.int32, np.int16)) or bufferAngle < 45 or bufferAngle > 90:
+        if not isinstance(bufferAngle, (float, np.float64, np.float32, np.float16)) or bufferAngle < 45 or bufferAngle > 90:
             print('bufferAngle is not of correct type or out of range')
             return False
 
