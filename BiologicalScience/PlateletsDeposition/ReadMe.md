@@ -13,11 +13,12 @@ Frontiers in Physiology: Computational Physiology and Medicine (2018)
 ## Dependencies 
 - g++ 
 - Swig 
-- abcpy0.3.0
+- abcpy0.5.2
 
 ## Steup 
 
 - Run make 
 - You can run an example ABC inference scheme on the platelet deposition model by 'python3 Inference.py'
-
-
+- (if MPI is installed) 
+1. Modify line 31 of Inference.py from 'from abcpy.backends import BackendDummy as Backend' to 'from abcpy.backends import BackendMPI as Backend'
+2. To run: 'mpirun -np 8 python3 Inference.py'

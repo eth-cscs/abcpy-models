@@ -4,7 +4,7 @@ WGET=wget -q
 
 CC=g++
 CPPFLAGS=-fPIC -O3
-INCLUDEPATH=/usr/include/python3.5
+INCLUDEPATH=/usr/include/python3.6
 
 cpp: _model.so model.py
 

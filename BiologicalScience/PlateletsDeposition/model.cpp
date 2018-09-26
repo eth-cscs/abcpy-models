@@ -1003,7 +1003,7 @@ void Deposition(double* results, unsigned int nrows, unsigned int ncols, double 
 }// end Deposition
 
 
-void deposition_model(double* results, unsigned int rsize, unsigned int k, double pAd, double pAg, double pT, double pF, double aT, int seed) {
+void model(double* results, unsigned int rsize, unsigned int k, double pAd, double pAg, double pT, double pF, double aT, int seed) {
   boost::mt19937 rng(seed);
   for (int i=0; i<k; ++i) {
     int msize = rsize / k;

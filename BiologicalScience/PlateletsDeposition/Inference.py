@@ -1,44 +1,59 @@
 import numpy as np
-from Model import Deposition
-from Statistics import DepositionStatistics
-from Distance import  DepositionDistance
-from abcpy.distributions import Uniform, MultiNormal
-from abcpy.inferences import SABC
-from abcpy.output import Journal
-import matplotlib.pyplot as plt
-from scipy.stats import gaussian_kde
+from abcpy.continuousmodels import Uniform
+from Model import PlateletDeposition
 
-from abcpy.backends import BackendDummy
-backend = BackendDummy()
+# Define Graphical Model
+pAd = Uniform([[50], [150]], name='pAD')
+pAg = Uniform([[5], [20]], name='pAg')
+pT = Uniform([[0.1], [1.5]], name='pT')
+pF = Uniform([[0.5e-3], [3e-3]], name='pF')
+aT = Uniform([[0], [10]], name='aT')
+PD = PlateletDeposition([pAd, pAg, pT, pF, aT], name = 'PD')
 
-#Define model 
-lb, ub = [50,5,0.1,0.5e-3,0], [150,20,1.5,3e-3,10]
-prior = Uniform(lb = [50,5,0.1,0.5e-3,0],ub = [150,20,1.5,3e-3,10])
-pAd, pAg, pT, pF, aT = 110, 14.6, 0.6, 1.7e-3, 6
-model = Deposition(prior, pAd, pAg, pT, pF, aT, seed = 1)
 # Observed data
-a =  np.array([ [0,0,0,172200,4808],
+data_obs =  [np.array([ [0,0,0,172200,4808],
 [20,1689,26.8,155100,1683],
 [60,2004,29.9,149400,0],
 [120,1968,31.3,140700,0],
-[300,1946,36.6,125800,0]])
+[300,1946,36.6,125800,0]])]
 
-np.save('depo_experimental.npy',a)
-BE = np.zeros(shape=(10,5))
-index = 5
-y_obs = np.load('depo_experimental.npy')[index]
+data_obs_1 =  [np.array([ [0,0,0,172200,4808],
+[20,1689,26.8,155100,1683],
+[60,2004,29.9,149400,0],
+[120,1968,31.3,140700,0],
+[300,1946,36.6,125801,0]])]
 
-# Define summary stat and distance
-stat_calc = DepositionStatistics(degree = 1, cross = 0)
-dist_calc = DepositionDistance(stat_calc)
+# Example to Generate Data to check it's correct
+#PDtry = PlateletDeposition([110.0, 14.6, 0.6, 1.7e-3, 6.0], name = 'PD')
+#resultfakeobs1 = PDtry.forward_simulate([110.0, 14.6, 0.6, 1.7e-3, 6.0], 1)
 
+# Define backend
+from abcpy.backends import BackendDummy as Backend
+backend = Backend()
 
-mean = np.array([-13.0, .0, 7.0])
-cov = np.eye(3)
-kernel = MultiNormal(mean, cov, seed=1)
+# Define kernel and join the defined kernels
+from abcpy.perturbationkernel import DefaultKernel
+kernel = DefaultKernel([pAd, pAg, pT, pF, aT])
 
-steps, epsilon, n_samples, n_samples_per_param = 2, 40, 1, 1
-sampler = SABC(model, dist_calc, kernel, backend, seed = 1)
-journal_sabc = sampler.sample([y_obs], steps, epsilon, n_samples, n_samples_per_param)
-journal_sabc.save('experimental_5.jrnl')
-samples = (journal_sabc.get_parameters(), journal_sabc.get_weights())
+# Define Statistics
+from Statistics import DepositionStatistics
+statistics_calculator = DepositionStatistics(degree=1, cross=False)
+
+# Define distance
+from Distance import DepositionDistance
+distance_calculator = DepositionDistance(statistics_calculator)
+
+print(distance_calculator.distance(data_obs, data_obs_1))
+
+print('Hello')
+
+## APMCABC ##
+from abcpy.inferences import APMCABC
+sampler = APMCABC([PD], [distance_calculator], backend, kernel, seed = 1)
+steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =4, 8, 1, 0.1, 0.03, 2, 1.0, None
+print('APMCABC Inferring')
+
+# We use resultfakeobs1 as our observed dataset
+journal_apmcabc = sampler.sample([data_obs], steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file)
+print(journal_apmcabc.posterior_mean())
+journal_apmcabc.save('apmcabc_fakeobs1.jrnl')
