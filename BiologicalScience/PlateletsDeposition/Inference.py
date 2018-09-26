@@ -47,13 +47,22 @@ print(distance_calculator.distance(data_obs, data_obs_1))
 
 print('Hello')
 
+## SABC ##
+from abcpy.inferences import SABC
+sampler = SABC([PD], [distance_calculator], backend, kernel, seed = 1)
+#Inference
+steps, epsilon, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample, n_update, adaptcov, full_output = 2, [50], 4, 1, 2, 0.2, 0.3, 0.1, None, None, 1, 1
+print('SABC Inferring')
+journal_sabc = sampler.sample([data_obs], steps, epsilon, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample, n_update, adaptcov, full_output)
+print('SABC done')
+
 ## APMCABC ##
-from abcpy.inferences import APMCABC
-sampler = APMCABC([PD], [distance_calculator], backend, kernel, seed = 1)
-steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =4, 8, 1, 0.1, 0.03, 2, 1.0, None
-print('APMCABC Inferring')
+#from abcpy.inferences import APMCABC
+#sampler = APMCABC([PD], [distance_calculator], backend, kernel, seed = 1)
+#steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =2, 8, 1, 0.25, 0.03, 2, 1.0, None
+#print('APMCABC Inferring')
 
 # We use resultfakeobs1 as our observed dataset
-journal_apmcabc = sampler.sample([data_obs], steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file)
-print(journal_apmcabc.posterior_mean())
-journal_apmcabc.save('apmcabc_fakeobs1.jrnl')
+#journal_apmcabc = sampler.sample([data_obs], steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file)
+print(journal_sabc.posterior_mean())
+journal_sabc.save('sabc_fakeobs1.jrnl')
