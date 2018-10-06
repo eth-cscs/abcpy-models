@@ -5,7 +5,9 @@ import numpy as np
 
 class DistanceType1(Distance):
     """
-    This class implements the Euclidean distance between two vectors.
+    This distance is simply the Euclidean distance between the heatmaps
+    The Euclidean distance between each observation and each simulation is computed
+    The final outcome is the average difference for each cell among simulation and observation
 
     The maximum value of the distance is np.inf.
     """
@@ -83,7 +85,9 @@ class DistanceType1(Distance):
         
 class DistanceType2(Distance):
     """
-    This class implements the Euclidean distance between two vectors.
+    This distance is Euclidean distance between the sorted heatmaps
+    The idea is that is not so important where the maximum value is but how big it is and how are the number distributed
+    This is simply a guess and this distance was defined to check if such idea work or not
 
     The maximum value of the distance is np.inf.
     """
@@ -163,7 +167,8 @@ class DistanceType2(Distance):
         
 class DistanceType3(Distance):
     """
-    This class implements the Euclidean distance between two vectors.
+    This is distance is more complex than the others, it is used to compare how different are the peaks both in size and location
+    It has been self developed and aim at reproducing a peak similar to the one observed during the experiment
 
     The maximum value of the distance is np.inf.
     """
@@ -278,7 +283,9 @@ class DistanceType3(Distance):
 
 class DistanceType4(Distance):
     """
-    This class implements the Euclidean distance between two vectors.
+    This distance compute the Euclidean distance between the positions of pedestrians.
+    In this distance only 1 and 0 are considered.
+    This distance was proposed by Antonietta Mira.
 
     The maximum value of the distance is np.inf.
     """
