@@ -1,7 +1,7 @@
 # Lorenz 95 Weather prediction model
 The Lorenz model is a modification of the original weather prediction model of Lorenz (1995)
 when fast climate variables are unobserved (Wilks (2005)). To perform inference using ABC, we provide
-summar statistics suggested by Hakkarainen et al. (2012).
+summary statistics suggested by Hakkarainen et al. (2012).
 
 ## Reference
 1. Lorenz E (1995). “Predictability: a problem partly solved.” In Proceedings of the Seminar on

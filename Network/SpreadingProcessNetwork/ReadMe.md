@@ -1,8 +1,8 @@
 # Spreading Process on Network
 
 This folder contains models (Simple and Complex Contagion) and 
-summary statistics, distance, Kernel, prior, infernce schemes 
-to perform the Bayesian inference of the spreading processe parameters 
+summary statistics, distance, Kernel, prior, inference schemes 
+to perform the Bayesian inference of the spreading process parameters 
 and the seed node. Further we also include some codes to compute Bayes Estimate, 
 visualize posterior distribution etc. 
 
