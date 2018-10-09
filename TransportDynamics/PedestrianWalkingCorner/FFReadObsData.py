@@ -7,14 +7,14 @@ from os.path import isfile, join
 
 def ReadObsdata():
     # Constants (related to experimental or simulation conditions, known a priori)
-    maxPed = 16  # number of pedestrians (whole group)
-    meshSize = 0.4  # mesh size (m)
-    vFree = 1.4  # free walking speed (m/s)
-    direction = 'L'  # turning direction
-    fps = 29.97  # frame rate in video recordings
-    maxTime = 30 # maximum possible time for passing (s)
-    corrLength = 2.50  # length of the corridor considered (m)
-    repNumber = -1  # number of repetition (-1 loop all)
+    maxPed = 42         # number of pedestrians (whole group)
+    meshSize = 0.4      # mesh size (m)
+    vFree = 1.4         # free walking speed (m/s)
+    direction = 'L'     # turning direction
+    fps = 29.97         # frame rate in video recordings
+    maxTime = 60        # maximum possible time for passing (s)
+    corrLength = 2.50   # length of the corridor considered (m)
+    repNumber = -1      # number of repetition (-1 loop all)
 
     ## READ EXPERIMENTAL DATA
     # Read file list and prepare relevant strings
