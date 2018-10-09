@@ -1,5 +1,6 @@
+<<<<<<< HEAD
 # Pedestrian walking through a corner
-This floor field model is for simulating pedestrains' walking throug a corner.
+This floor field model is for simulating pedestrians' walking throug a corner.
 Three models are taken to generate the static floor field which is responsible to governing pedestrian navigation:
 - a simple approach proposed by Katsuhiro Nishinari
 - the block algorithm proposed by Li et al.

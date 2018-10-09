@@ -15,7 +15,7 @@ Frontiers in Physiology: Computational Physiology and Medicine (2018)
 - Swig 
 - abcpy0.5.2
 
-## Steup 
+## Setup 
 
 - Run make 
 - You can run an example ABC inference scheme on the platelet deposition model by 'python3 Inference.py'
