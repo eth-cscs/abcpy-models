@@ -62,6 +62,7 @@ class DistanceType1(Distance):
         # Simulation
         resSimulationHeatmap = []
         for repi in range(simRep):
+            print(s2[repi, :4])
             # Extract fundamental information
             nCells = int(s2[repi,1])
             # Extract simulation heat map
