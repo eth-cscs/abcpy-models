@@ -3,6 +3,79 @@ import copy
 import math
 import numpy as np
 
+
+class Absolute(Distance):
+    """
+    This distance is simply the Euclidean distance between the heatmaps
+    The Euclidean distance between each observation and each simulation is computed
+    The final outcome is the average difference for each cell among simulation and observation
+
+    The maximum value of the distance is np.inf.
+    """
+
+    def __init__(self):
+
+        # Since the observations do always stay the same, we can save the
+        #  summary statistics of them and not recalculate it each time
+        self.s1 = None
+        self.data_set = None
+
+    def distance(self, d1, d2):
+        """Calculates the distance between two datasets.
+
+        Parameters
+        ----------
+        d1, d2: list
+            A list, containing a list describing the data set
+        """
+        if not isinstance(d1, list):
+            raise TypeError('Data is not of allowed types')
+        if not isinstance(d2, list):
+            raise TypeError('Data is not of allowed types')
+
+        # Observation
+        resObservationHeatmap = []
+        resObsPos = []
+        for repi in range(len(d1)):
+            # Extract fundamental information
+            nCell = d1[repi][1].astype(int)
+            nTime = d1[repi][0].astype(int)
+            resObservationHeatmap.append(
+                copy.deepcopy(np.array(d1[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resObsPos.append(np.array(d1[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
+        # Simulation
+        resSimulationHeatmap = []
+        resSimPos = []
+        for repi in range(len(d2)):
+            # Extract fundamental information
+            nCell = d2[repi][1].astype(int)
+            nTime = d2[repi][0].astype(int)
+            resSimulationHeatmap.append(
+                copy.deepcopy(np.array(d2[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resSimPos.append(np.array(d2[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
+        ## ACTUALLY COMPUTE DISTANCE
+        # Compute distance using heatmap
+        tempDistance = 0
+        for simNumber in range(len(d2)):
+            for obsNumber in range(simNumber, len(d1)):
+                tempDistance += sum(sum(abs(resObservationHeatmap[obsNumber] - resSimulationHeatmap[simNumber]))) / pow(
+                    nCell, 2)
+                # tempDistance += self.all_dist(resObsPos[obsNumber], resSimPos[simNumber])
+
+        return tempDistance / (len(d1) * len(d2))
+
+    def dist_max(self):
+        return np.inf
+
+    def all_dist(self, resObsPos, resSimPos):
+        if len(resSimPos) > len(resObsPos):
+            resObsPos = resObsPos.tolist() + [0 for i in range(len(resSimPos) - len(resObsPos))]
+        else:
+            resSimPos = resSimPos.tolist() + [0 for i in range(len(resObsPos) - len(resSimPos))]
+        return sum(abs(resObsPos - resSimPos)) / len(resSimPos)
+
 class DistanceType1(Distance):
     """
     This distance is simply the Euclidean distance between the heatmaps

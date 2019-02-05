@@ -5,8 +5,8 @@ from Model import FFSimulator1, FFSimulator2, FFSimulator3
 # Define the most important options, i.e. which ABC algorithm to use and which model should be evaluated
 # This is make to simplify the switching operation between different models
 # exp_dataset is simply the name of the output journal file containing results
-abc_method = 'apmcabc'
-sim_model = 'ff3'
+abc_method = 'sabc'
+sim_model = 'ff1'
 exp_dataset = 'fakeobs1'
 
 # Define Graphical Model
@@ -44,7 +44,7 @@ kernel = JointPerturbationKernel([kernelcontinuous])
 # Example to Generate Data to check forward simulations work without problems
 if sim_model=='ff1':
     fftry = FFSimulator1([4.0, 1.0, 1.5, 0.1, 0.25], name = 'fftry')
-    resultfakeobs1 = fftry.forward_simulate([4.0, 1.0, 1.5, 0.1, 0.25], 10)
+    resultfakeobs1 = fftry.forward_simulate([4.0, 5.0, 3, 0.3, 0.5], 1)
     resultfakeobs2 = fftry.forward_simulate([5.0, 1.0, 1.5, 0.1, 0.25], 10)
 if sim_model=='ff2':
     fftry = FFSimulator2([4.0, 1.0, 1.5, 0.1, 0.25, 0.5, 50.0], name = 'fftry')
@@ -56,28 +56,28 @@ if sim_model=='ff3':
     resultfakeobs2 = fftry.forward_simulate([5.0, 1.0, 1.5, 0.1, 0.25, 1.0, 2.0, 0.725, 0.349], 10)
 
 # Check the datasets are different
-if np.mean(resultfakeobs1[0])==np.mean(resultfakeobs2[0]):
-    print('Datasets are not different!')
+# if np.mean(resultfakeobs1[0])==np.mean(resultfakeobs2[0]):
+#     print('Datasets are not different!')
   
 # Define backend
 from abcpy.backends import BackendDummy as Backend
 backend = Backend()
 
-# Define Statistics
-from abcpy.statistics import Identity
-statistics_calculator = Identity(degree=1, cross=False)
+# # Define Statistics
+# from abcpy.statistics import Identity
+# statistics_calculator = Identity(degree=1, cross=False)
 
 # Define distance
 # DistanceType1 is the Euclidean distance between the heatmaps
 # DistanceType2 is the Euclidean distance between the sorted heatmaps
 # DistanceType3 is a measure which determine how close are the peaks both in maximum size and in location
 # DistanceType4 is the Euclidean distance between pedestrian position at each time step
-from Distance import DistanceType1
-distance_calculator = DistanceType1(statistics_calculator)
+from Distance import Absolute
+distance_calculator = Absolute()
 
-# Check whether the distance works
-if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
-    print('Something may be wrong with the distance!')
+# # Check whether the distance works
+# if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
+#     print('Something may be wrong with the distance!')
 
 ###############################################################################
 #                                APMCABC                                      #
@@ -100,10 +100,12 @@ if abc_method=='apmcabc':
 if abc_method=='sabc':
     from abcpy.inferences import SABC
     sampler = SABC([ff], [distance_calculator], backend, kernel, seed = 1)
-    steps, epsilon, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample, n_update, adaptcov, full_output, journal_file = 2, 40, 1000, 1, 2, 0.2, 0.3, 0.5, None, None, 1, 0, None
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
-    journal_sabc1 = sampler.sample([resultfakeobs1], steps, epsilon, n_samples, n_samples_per_param, beta, delta, v, ar_cutoff, resample, n_update, adaptcov, full_output, journal_file)
+    journal_sabc1 = sampler.sample([resultfakeobs1], steps=20, epsilon=40, n_samples=300000, n_samples_per_param=1,
+                                   beta=2, \
+                                   delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, adaptcov=1,
+                                   full_output=1)
     print(journal_sabc1.posterior_mean())
     journal_sabc1.save('sabc_' + sim_model + '_' + exp_dataset + '.jrnl')
