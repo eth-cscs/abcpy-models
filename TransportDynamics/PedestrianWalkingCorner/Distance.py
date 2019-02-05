@@ -60,9 +60,11 @@ class Absolute(Distance):
         tempDistance = 0
         for simNumber in range(len(d2)):
             for obsNumber in range(simNumber, len(d1)):
+                # Absolute distance between Heatmaps
                 tempDistance += sum(sum(abs(resObservationHeatmap[obsNumber] - resSimulationHeatmap[simNumber]))) / pow(
                     nCell, 2)
-                # tempDistance += self.all_dist(resObsPos[obsNumber], resSimPos[simNumber])
+                # Absolute Distance between pedpositions at each time
+                tempDistance += self.all_dist(resObsPos[obsNumber], resSimPos[simNumber])
 
         return tempDistance / (len(d1) * len(d2))
 
