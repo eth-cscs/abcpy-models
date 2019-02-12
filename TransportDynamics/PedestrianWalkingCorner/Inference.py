@@ -31,8 +31,8 @@ diasP2 = Uniform([[0],[1]], name='diasP2')
 # The same name is used for the simulator so that there is no need to distinguish hereafter
 from abcpy.perturbationkernel import MultivariateNormalKernel, JointPerturbationKernel
 if sim_model=='ff1':
-    ff = FFSimulator1([kS, kD, kW, decay, diffusion], name = 'ff')
-    kernelcontinuous = MultivariateNormalKernel([kS, kD, kW, decay, diffusion])
+    ff = FFSimulator1([kS, kD, kW, .1, .25], name = 'ff')
+    kernelcontinuous = MultivariateNormalKernel([kS, kD, kW])
 if sim_model=='ff2':
     ff = FFSimulator2([kS, kD, kW, decay, diffusion, liBufferRatio, liBufferAngle], name = 'ff')
     kernelcontinuous = MultivariateNormalKernel([kS, kD, kW, decay, diffusion, liBufferRatio, liBufferAngle])
@@ -43,9 +43,9 @@ kernel = JointPerturbationKernel([kernelcontinuous])
 
 # Example to Generate Data to check forward simulations work without problems
 if sim_model=='ff1':
-    fftry = FFSimulator1([4.0, 1.0, 1.5, 0.1, 0.25], name = 'fftry')
-    resultfakeobs1 = fftry.forward_simulate([4.0, 5.0, 3, 0.3, 0.5], 1)
-    resultfakeobs2 = fftry.forward_simulate([5.0, 1.0, 1.5, 0.1, 0.25], 10)
+    fftry = FFSimulator1([4.0, 5.0, 3.0, 0.1, 0.25], name = 'fftry')
+    resultfakeobs1 = fftry.forward_simulate([4.0, 5.0, 3, 0.1, 0.25], 1)
+    resultfakeobs2 = fftry.forward_simulate([4.0, 5.0, 3, 0.1, 0.25], 10)
 if sim_model=='ff2':
     fftry = FFSimulator2([4.0, 1.0, 1.5, 0.1, 0.25, 0.5, 50.0], name = 'fftry')
     resultfakeobs1 = fftry.forward_simulate([4.0, 1.0, 1.5, 0.1, 0.25, 0.5, 50.0], 10)
@@ -60,7 +60,7 @@ if sim_model=='ff3':
 #     print('Datasets are not different!')
   
 # Define backend
-from abcpy.backends import BackendDummy as Backend
+from abcpy.backends import BackendMPI as Backend
 backend = Backend()
 
 # # Define Statistics
@@ -72,9 +72,12 @@ backend = Backend()
 # DistanceType2 is the Euclidean distance between the sorted heatmaps
 # DistanceType3 is a measure which determine how close are the peaks both in maximum size and in location
 # DistanceType4 is the Euclidean distance between pedestrian position at each time step
-from Distance import Absolute, DistanceType1
-distance_calculator = Absolute()
+from Distance import Absolute, DistanceType1, DistanceType2, DistanceType3, DistanceType4
+#distance_calculator = Absolute()
 #distance_calculator = DistanceType1()
+#distance_calculator = DistanceType2()
+distance_calculator = DistanceType3()
+#distance_calculator = DistanceType4()
 
 # # Check whether the distance works
 # if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
@@ -104,7 +107,7 @@ if abc_method=='sabc':
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
-    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=10, n_samples_per_param=1,
+    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=100, n_samples_per_param=1,
                                    beta=2, \
                                    delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, adaptcov=1,
                                    full_output=1)
