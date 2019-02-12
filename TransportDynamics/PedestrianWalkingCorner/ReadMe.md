@@ -10,7 +10,7 @@ Three models are taken to generate the static floor field which is responsible t
 2. Dias, Charitha and Lovreglio, Ruggiero "Calibrating cellular automaton models for pedestrians walking through corners." Physics Letters A 382.19 (2018): 1255-1261.
 
 ## Dependencies 
-- abcpy0.5.1
+- abcpy0.5.5
 
 ## Setup
 You can run an example ABC inference scheme on this model by running 'python3 Inference.py'
