@@ -87,14 +87,13 @@ class DistanceType1(Distance):
     The maximum value of the distance is np.inf.
     """
 
-    def __init__(self, statistics):
-        self.statistics_calc = statistics
+    def __init__(self):
 
         # Since the observations do always stay the same, we can save the
         #  summary statistics of them and not recalculate it each time
         self.s1 = None
         self.data_set = None
-        
+
     def distance(self, d1, d2):
         """Calculates the distance between two datasets.
 
@@ -107,58 +106,52 @@ class DistanceType1(Distance):
             raise TypeError('Data is not of allowed types')
         if not isinstance(d2, list):
             raise TypeError('Data is not of allowed types')
-        
-        # Distance main algorithm
-        def single_distance(obsHeatmap,simHeatmap):
-            return abs(sum(sum(pow(obsHeatmap - simHeatmap,2))))
-
-        # Extract summary statistics from the dataset
-        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
-            self.s1 = self.statistics_calc.statistics(d1)
-            self.data_set = d1
-        s2 = self.statistics_calc.statistics(d2)
-
-        ## EXTRACT MATRICES FROM LIST
-        obsRep, simRep = len(self.s1), len(s2)
 
         # Observation
         resObservationHeatmap = []
-        for repi in range(obsRep):
+        resObsPos = []
+        for repi in range(len(d1)):
             # Extract fundamental information
-            nCells = int(self.s1[repi,1])
-            # Extract observation heat map
-            repObservationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repObservationHeatmap[i,:] = self.s1[repi,index:index+nCells]
-            # Add to global quantities
-            resObservationHeatmap.append(copy.deepcopy(repObservationHeatmap))
-        
+            nCell = d1[repi][1].astype(int)
+            nTime = d1[repi][0].astype(int)
+            resObservationHeatmap.append(
+                copy.deepcopy(np.array(d1[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resObsPos.append(np.array(d1[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
         # Simulation
         resSimulationHeatmap = []
-        for repi in range(simRep):
-            print(s2[repi, :4])
+        resSimPos = []
+        for repi in range(len(d2)):
             # Extract fundamental information
-            nCells = int(s2[repi,1])
-            # Extract simulation heat map
-            repSimulationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repSimulationHeatmap[i,:] = s2[repi,index:index+nCells]    
-            # Add to global quantities
-            resSimulationHeatmap.append(copy.deepcopy(repSimulationHeatmap))
-        
+            nCell = d2[repi][1].astype(int)
+            nTime = d2[repi][0].astype(int)
+            resSimulationHeatmap.append(
+                copy.deepcopy(np.array(d2[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resSimPos.append(np.array(d2[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
         ## ACTUALLY COMPUTE DISTANCE
         # Compute distance using heatmap
         tempDistance = 0
-        for simNumber in range(simRep):
-            for obsNumber in range(obsRep):
-                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
-        return tempDistance/(nCells**2 * simRep * obsRep)
+        for simNumber in range(len(d2)):
+            for obsNumber in range(simNumber, len(d1)):
+                # Absolute distance between Heatmaps
+                tempDistance += sum(sum(abs(resObservationHeatmap[obsNumber] - resSimulationHeatmap[simNumber]))) / pow(
+                    nCell, 2)
+                # Absolute Distance between pedpositions at each time
+                tempDistance += self.all_dist(resObsPos[obsNumber], resSimPos[simNumber])
+
+        return tempDistance / (len(d1) * len(d2))
 
     def dist_max(self):
         return np.inf
-        
+
+    def all_dist(self, resObsPos, resSimPos):
+        if len(resSimPos) > len(resObsPos):
+            resObsPos = resObsPos.tolist() + [0 for i in range(len(resSimPos) - len(resObsPos))]
+        else:
+            resSimPos = resSimPos.tolist() + [0 for i in range(len(resObsPos) - len(resSimPos))]
+        return sum(abs(resObsPos - resSimPos)) / len(resSimPos)
+
 class DistanceType2(Distance):
     """
     This distance is Euclidean distance between the sorted heatmaps
@@ -168,14 +161,13 @@ class DistanceType2(Distance):
     The maximum value of the distance is np.inf.
     """
 
-    def __init__(self, statistics):
-        self.statistics_calc = statistics
+    def __init__(self):
 
         # Since the observations do always stay the same, we can save the
         #  summary statistics of them and not recalculate it each time
         self.s1 = None
         self.data_set = None
-        
+
     def distance(self, d1, d2):
         """Calculates the distance between two datasets.
 
@@ -188,58 +180,52 @@ class DistanceType2(Distance):
             raise TypeError('Data is not of allowed types')
         if not isinstance(d2, list):
             raise TypeError('Data is not of allowed types')
-        
-        # Distance main algorithm
-        def single_distance(obsHeatmap,simHeatmap):
-            resObsSorted = np.sort(np.reshape(obsHeatmap, (1, obsHeatmap.shape[0] * obsHeatmap.shape[1])))
-            resSimSorted = np.sort(np.reshape(simHeatmap, (1, simHeatmap.shape[0] * simHeatmap.shape[1])))
-            return sum(sum(pow(resObsSorted-resSimSorted, 2)))
-
-        # Extract summary statistics from the dataset
-        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
-            self.s1 = self.statistics_calc.statistics(d1)
-            self.data_set = d1
-        s2 = self.statistics_calc.statistics(d2)
-
-        ## EXTRACT MATRICES FROM LIST
-        obsRep, simRep = len(self.s1), len(s2)
 
         # Observation
         resObservationHeatmap = []
-        for repi in range(obsRep):
+        resObsPos = []
+        for repi in range(len(d1)):
             # Extract fundamental information
-            nCells = int(self.s1[repi,1])
-            # Extract observation heat map
-            repObservationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repObservationHeatmap[i,:] = self.s1[repi,index:index+nCells]
-            # Add to global quantities
-            resObservationHeatmap.append(copy.deepcopy(repObservationHeatmap))
-        
+            nCell = d1[repi][1].astype(int)
+            nTime = d1[repi][0].astype(int)
+            resObservationHeatmap.append(
+                copy.deepcopy(np.array(d1[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resObsPos.append(np.array(d1[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
         # Simulation
         resSimulationHeatmap = []
-        for repi in range(simRep):
+        resSimPos = []
+        for repi in range(len(d2)):
             # Extract fundamental information
-            nCells = int(s2[repi,1])
-            # Extract simulation heat map
-            repSimulationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repSimulationHeatmap[i,:] = s2[repi,index:index+nCells]    
-            # Add to global quantities
-            resSimulationHeatmap.append(copy.deepcopy(repSimulationHeatmap))
-        
+            nCell = d2[repi][1].astype(int)
+            nTime = d2[repi][0].astype(int)
+            resSimulationHeatmap.append(
+                copy.deepcopy(np.array(d2[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resSimPos.append(np.array(d2[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
         ## ACTUALLY COMPUTE DISTANCE
         # Compute distance using heatmap
         tempDistance = 0
-        for simNumber in range(simRep):
-            for obsNumber in range(obsRep):
-                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
-        return tempDistance/(nCells**2 * simRep * obsRep)
+        for simNumber in range(len(d2)):
+            for obsNumber in range(simNumber, len(d1)):
+                # Sorted distance between heatmaps
+                resObsSorted = np.sort(np.reshape(resObservationHeatmap[obsNumber], (1, resObservationHeatmap[obsNumber].shape[0] * resObservationHeatmap[obsNumber].shape[1])))
+                simObsSorted = np.sort(np.reshape(resSimulationHeatmap[simNumber], (1, resSimulationHeatmap[simNumber].shape[0] * resSimulationHeatmap[simNumber].shape[1])))
+                tempDistance += sum(sum(abs(resObsSorted - simObsSorted))) / pow(nCell, 2)
+                # Sorted distance each time
+                tempDistance += self.all_dist(resObsPos[obsNumber],resSimPos[simNumber])
+                
+        return tempDistance / (len(d1) * len(d2))
 
     def dist_max(self):
         return np.inf
+    
+    def all_dist(self, resObsPos, resSimPos):
+        if len(resSimPos) > len(resObsPos):
+            resObsPos = resObsPos.tolist() + [0 for i in range(len(resSimPos) - len(resObsPos))]
+        else:
+            resSimPos = resSimPos.tolist() + [0 for i in range(len(resObsPos) - len(resSimPos))]
+        return sum(abs(resObsPos - resSimPos)) / len(resSimPos)
         
 class DistanceType3(Distance):
     """
@@ -249,14 +235,13 @@ class DistanceType3(Distance):
     The maximum value of the distance is np.inf.
     """
 
-    def __init__(self, statistics):
-        self.statistics_calc = statistics
+    def __init__(self):
 
         # Since the observations do always stay the same, we can save the
         #  summary statistics of them and not recalculate it each time
         self.s1 = None
         self.data_set = None
-        
+
     def distance(self, d1, d2):
         """Calculates the distance between two datasets.
 
@@ -269,93 +254,85 @@ class DistanceType3(Distance):
             raise TypeError('Data is not of allowed types')
         if not isinstance(d2, list):
             raise TypeError('Data is not of allowed types')
-        
-        # Distance main algorithm
-        def single_distance(obsHeatmap,simHeatmap):
-            # Sort elements and get unique values
-            resObsSorted = np.sort(np.reshape(obsHeatmap, (1, obsHeatmap.shape[0] * obsHeatmap.shape[1])))
-            resSimSorted = np.sort(np.reshape(simHeatmap, (1, simHeatmap.shape[0] * simHeatmap.shape[1])))
-            resObsElements = np.unique(resObsSorted)
-            resSimElements = np.unique(resSimSorted)
-            
-            # Determine which matrix has most steps
-            highIndex = np.array([resObsElements.shape[0],resSimElements.shape[0]]).argmax()
-            if highIndex==0:    highArray, highElements, lowArray = obsHeatmap, resObsElements, simHeatmap
-            else:               highArray, highElements, lowArray = simHeatmap, resSimElements, obsHeatmap
-            
-            distanceValue = 0
-            for highValue in highElements:
-                # Look for areas with same level in highArray and find closest height in lowArray
-                highIndex, diff = [], 1E+10
-                for i in range(highArray.shape[0]):
-                    for j in range(highArray.shape[1]):
-                        if highArray[i,j]==highValue:
-                            highIndex.append(np.array([i,j]))
-                        if abs(highValue-lowArray[i,j])<diff:
-                            lowValue = lowArray[i,j]
-                            diff = abs(highValue-lowArray[i,j])
-                # Look for areas with similar level in lowArray
-                lowIndex = []
-                for i in range(lowArray.shape[0]):
-                    for j in range(lowArray.shape[1]):
-                        if lowArray[i,j]==lowValue:
-                            lowIndex.append(np.array([i,j]))
-                # Compute minimum distance between similar areas
-                dist = 1E+10
-                for i in range(len(lowIndex)):
-                    for j in range(len(highIndex)):
-                        diff = lowIndex[i]-highIndex[j]
-                        if math.sqrt(diff[0]**2+diff[1]**2)<dist:
-                            dist = math.sqrt(diff[0]**2+diff[1]**2)
-                # Compute final distance
-                distanceValue += abs(highValue-lowValue)*dist
-            return distanceValue
-
-        # Extract summary statistics from the dataset
-        if (self.s1 is None or (np.asarray(self.data_set) == np.asarray(d1)).all() == False):
-            self.s1 = self.statistics_calc.statistics(d1)
-            self.data_set = d1
-        s2 = self.statistics_calc.statistics(d2)
-
-        ## EXTRACT MATRICES FROM LIST
-        obsRep, simRep = len(self.s1), len(s2)
 
         # Observation
         resObservationHeatmap = []
-        for repi in range(obsRep):
+        resObsPos = []
+        for repi in range(len(d1)):
             # Extract fundamental information
-            nCells = int(self.s1[repi,1])
-            # Extract observation heat map
-            repObservationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repObservationHeatmap[i,:] = self.s1[repi,index:index+nCells]
-            # Add to global quantities
-            resObservationHeatmap.append(copy.deepcopy(repObservationHeatmap))
-        
+            nCell = d1[repi][1].astype(int)
+            nTime = d1[repi][0].astype(int)
+            resObservationHeatmap.append(
+                copy.deepcopy(np.array(d1[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resObsPos.append(np.array(d1[repi][2 + int(pow(nCell, 2)) + nTime:]))
+
         # Simulation
         resSimulationHeatmap = []
-        for repi in range(simRep):
+        resSimPos = []
+        for repi in range(len(d2)):
             # Extract fundamental information
-            nCells = int(s2[repi,1])
-            # Extract simulation heat map
-            repSimulationHeatmap = np.zeros((nCells,nCells))
-            for i in range(nCells):
-                index = 2 + i*nCells
-                repSimulationHeatmap[i,:] = s2[repi,index:index+nCells]    
-            # Add to global quantities
-            resSimulationHeatmap.append(copy.deepcopy(repSimulationHeatmap))
+            nCell = d2[repi][1].astype(int)
+            nTime = d2[repi][0].astype(int)
+            resSimulationHeatmap.append(
+                copy.deepcopy(np.array(d2[repi][2:2 + int(pow(nCell, 2))]).reshape(nCell, nCell)))
+            resSimPos.append(np.array(d2[repi][2 + int(pow(nCell, 2)) + nTime:]))
         
         ## ACTUALLY COMPUTE DISTANCE
         # Compute distance using heatmap
         tempDistance = 0
-        for simNumber in range(simRep):
-            for obsNumber in range(obsRep):
-                tempDistance += single_distance(resObservationHeatmap[obsNumber],resSimulationHeatmap[simNumber])
-        return tempDistance/(nCells**2 * simRep * obsRep)
+        for simNumber in range(len(d2)):
+            for obsNumber in range(len(d1)):
+                resObsSorted = np.sort(np.reshape(resObservationHeatmap[obsNumber], (1, resObservationHeatmap[obsNumber].shape[0] * resObservationHeatmap[obsNumber].shape[1])))
+                resSimSorted = np.sort(np.reshape(resSimulationHeatmap[simNumber], (1, resSimulationHeatmap[simNumber].shape[0] * resSimulationHeatmap[simNumber].shape[1])))
+                resObsElements = np.unique(resObsSorted)
+                resSimElements = np.unique(resSimSorted)
+            
+                # Determine which matrix has most steps
+                highIndex = np.array([resObsElements.shape[0],resSimElements.shape[0]]).argmax()
+                if highIndex==0:    highArray, highElements, lowArray = resObservationHeatmap[obsNumber], resObsElements, resSimulationHeatmap[simNumber]
+                else:               highArray, highElements, lowArray = resSimulationHeatmap[simNumber], resSimElements, resObservationHeatmap[obsNumber]
+                
+                distanceValue = 0
+                for highValue in highElements:
+                    # Look for areas with same level in highArray and find closest height in lowArray
+                    highIndex, diff = [], 1E+10
+                    for i in range(highArray.shape[0]):
+                        for j in range(highArray.shape[1]):
+                            if highArray[i,j]==highValue:
+                                highIndex.append(np.array([i,j]))
+                            if abs(highValue-lowArray[i,j])<diff:
+                                lowValue = lowArray[i,j]
+                                diff = abs(highValue-lowArray[i,j])
+                    # Look for areas with similar level in lowArray
+                    lowIndex = []
+                    for i in range(lowArray.shape[0]):
+                        for j in range(lowArray.shape[1]):
+                            if lowArray[i,j]==lowValue:
+                                lowIndex.append(np.array([i,j]))
+                    # Compute minimum distance between similar areas
+                    dist = 1E+10
+                    for i in range(len(lowIndex)):
+                        for j in range(len(highIndex)):
+                            diff = lowIndex[i]-highIndex[j]
+                            if math.sqrt(diff[0]**2+diff[1]**2)<dist:
+                                dist = math.sqrt(diff[0]**2+diff[1]**2)
+                    # Compute final distance
+                    distanceValue += abs(highValue-lowValue)*dist
+                
+                tempDistance += distanceValue / pow(nCell, 2)
+                tempDistance += self.all_dist(resObsPos[obsNumber],resSimPos[simNumber])
+                
+        return tempDistance / (len(d1) * len(d2))
 
     def dist_max(self):
         return np.inf
+    
+    def all_dist(self, resObsPos, resSimPos):
+        if len(resSimPos) > len(resObsPos):
+            resObsPos = resObsPos.tolist() + [0 for i in range(len(resSimPos) - len(resObsPos))]
+        else:
+            resSimPos = resSimPos.tolist() + [0 for i in range(len(resObsPos) - len(resSimPos))]
+        return sum(abs(resObsPos - resSimPos)) / len(resSimPos)
 
 class DistanceType4(Distance):
     """

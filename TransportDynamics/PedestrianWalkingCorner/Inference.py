@@ -72,8 +72,9 @@ backend = Backend()
 # DistanceType2 is the Euclidean distance between the sorted heatmaps
 # DistanceType3 is a measure which determine how close are the peaks both in maximum size and in location
 # DistanceType4 is the Euclidean distance between pedestrian position at each time step
-from Distance import Absolute
+from Distance import Absolute, DistanceType1
 distance_calculator = Absolute()
+#distance_calculator = DistanceType1()
 
 # # Check whether the distance works
 # if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
@@ -86,7 +87,7 @@ distance_calculator = Absolute()
 if abc_method=='apmcabc':
     from abcpy.inferences import APMCABC
     sampler = APMCABC([ff], [distance_calculator], backend, kernel, seed = 1)
-    steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file = 4, 1000, 1, 0.1, 0.03, 2, 1.0, None
+    steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file = 4, 10, 1, 0.1, 0.03, 2, 1.0, None
     print('APMCABC Inferring')
     
     # We use resultfakeobs1 as our observed dataset
@@ -103,7 +104,7 @@ if abc_method=='sabc':
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
-    journal_sabc1 = sampler.sample([resultfakeobs1], steps=20, epsilon=40, n_samples=300000, n_samples_per_param=1,
+    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=10, n_samples_per_param=1,
                                    beta=2, \
                                    delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, adaptcov=1,
                                    full_output=1)
