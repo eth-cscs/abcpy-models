@@ -2,6 +2,9 @@ import numpy as np
 from abcpy.continuousmodels import Uniform
 from Model import FFSimulator1, FFSimulator2, FFSimulator3
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 # Define the most important options, i.e. which ABC algorithm to use and which model should be evaluated
 # This is make to simplify the switching operation between different models
 # exp_dataset is simply the name of the output journal file containing results
@@ -60,7 +63,7 @@ if sim_model=='ff3':
 #     print('Datasets are not different!')
   
 # Define backend
-from abcpy.backends import BackendMPI as Backend
+from abcpy.backends import BackendDummy as Backend
 backend = Backend()
 
 # # Define Statistics
@@ -72,12 +75,15 @@ backend = Backend()
 # DistanceType2 is the Euclidean distance between the sorted heatmaps
 # DistanceType3 is a measure which determine how close are the peaks both in maximum size and in location
 # DistanceType4 is the Euclidean distance between pedestrian position at each time step
-from Distance import Absolute, DistanceType1, DistanceType2, DistanceType3, DistanceType4
+from Distance import DistanceType1, DistanceType2, DistanceType3, DistanceType4, DistanceWeighted
 #distance_calculator = Absolute()
 #distance_calculator = DistanceType1()
 #distance_calculator = DistanceType2()
-distance_calculator = DistanceType3()
+#distance_calculator = DistanceType3()
 #distance_calculator = DistanceType4()
+distance_calculator = DistanceWeighted()
+
+print(distance_calculator.distance(resultfakeobs1, resultfakeobs2))
 
 # # Check whether the distance works
 # if distance_calculator.distance(resultfakeobs1, resultfakeobs1)==distance_calculator.distance(resultfakeobs1, resultfakeobs2):
@@ -107,9 +113,9 @@ if abc_method=='sabc':
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
-    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=100, n_samples_per_param=1,
+    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=10, n_samples_per_param=1,
                                    beta=2, \
                                    delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, adaptcov=1,
                                    full_output=1)
     print(journal_sabc1.posterior_mean())
-    journal_sabc1.save('sabc_' + sim_model + '_' + exp_dataset + '.jrnl')
+    #journal_sabc1.save('sabc_' + sim_model + '_' + exp_dataset + '.jrnl')
