@@ -2,6 +2,8 @@ from abcpy.distances import Distance
 import copy
 import math
 import numpy as np
+from itertools import combinations
+import statsmodels.formula.api as smf
 
 
 
@@ -24,7 +26,7 @@ class DistanceWeighted(Distance):
         self.D2 = DistanceType2()
         self.D3 = DistanceType3()
         self.D4 = DistanceType4()
-        self.weight = np.array([.25, .25, .25, .25])
+        self.weight = np.array([1, 1, 1, 1])
 
     def distance(self, d1, d2):
         """Calculates the distance between two datasets.
@@ -48,8 +50,16 @@ class DistanceWeighted(Distance):
         Max = np.array([self.D1.dist_max(), self.D2.dist_max(), self.D3.dist_max(), self.D4.dist_max()])
         return sum(self.weight * Max)
 
-    def update(self, Y, X):
-        weight =
+    def update(self, new_all_parameters, new_all_data):
+        param_distance, data_distance = [], []
+        for element in list(combinations(range(len(new_all_parameters)), 2)):
+            param_distance.append(sum(abs(np.concatenate(new_all_parameters[element[0]]) - np.concatenate(new_all_parameters[element[1]]))))
+            data1, data2 = new_all_data[element[0]][0], new_all_data[element[1]][0]
+            data_distance.append([self.D1.distance(data1, data2), self.D2.distance(data1, data2),
+                                  self.D3.distance(data1, data2), self.D4.distance(data1, data2)])
+        results = smf.OLS(np.array(param_distance), np.array(data_distance)).fit()
+        self.weight = np.array(results.params)
+        return self.weight
 
 
 class DistanceType1(Distance):

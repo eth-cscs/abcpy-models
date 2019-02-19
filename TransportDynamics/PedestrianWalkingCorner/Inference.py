@@ -108,14 +108,13 @@ if abc_method=='apmcabc':
 #                                  SABC                                       #
 ###############################################################################
 if abc_method=='sabc':
-    from abcpy.inferences import SABC
+    from Inferences import SABC
     sampler = SABC([ff], [distance_calculator], backend, kernel, seed = 1)
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
     journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=10, n_samples_per_param=1,
                                    beta=2, \
-                                   delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, adaptcov=1,
-                                   full_output=1)
+                                   delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, full_output=1)
     print(journal_sabc1.posterior_mean())
     #journal_sabc1.save('sabc_' + sim_model + '_' + exp_dataset + '.jrnl')
