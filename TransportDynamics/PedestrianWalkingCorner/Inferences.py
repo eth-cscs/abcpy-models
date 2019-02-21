@@ -329,13 +329,12 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             # 0: update remotely required variables
             self.logger.info("Broadcasting parameters")
             self.epsilon = epsilon
-            self._update_broadcasts(smooth_distances, all_distances)
 
             # 1: Calculate  parameters
             self.logger.info("Initial accepted parameters")
             params_and_dists_pds = self.backend.map(self._accept_parameter, data_pds)
             params_and_dists = self.backend.collect(params_and_dists_pds)
-            new_parameters, new_data, new_distances, new_all_parameters, new_all_data, new_all_distances, index, acceptance, counter = [list(t) for t in
+            new_parameters, new_data, new_distances, index, acceptance, counter = [list(t) for t in
                                                                                                        zip(
                                                                                                            *params_and_dists)]
 
@@ -345,9 +344,6 @@ class SABC(BaseDiscrepancy, InferenceMethod):
 
             #new_parameters = np.array(new_parameters)
             new_distances = np.array(new_distances)
-            new_all_distances = np.concatenate(new_all_distances)
-            new_all_parameters = sum(new_all_parameters,[])
-            new_all_data = sum(new_all_data,[])
             index = np.array(index)
             acceptance = np.array(acceptance)
 
@@ -355,7 +351,6 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             if aStep == 0:
                 index = np.linspace(0, n_samples - 1, n_samples).astype(int).reshape(n_samples, )
                 accept = 0
-                all_distances = new_all_distances
 
             # Initialize/Update the accepted parameters and their corresponding distances
             if accepted_parameters is None:
@@ -368,21 +363,22 @@ class SABC(BaseDiscrepancy, InferenceMethod):
                         accepted_data[index[ind]] = new_data[ind]
 
             # 1.5: Update the distance, recompute distance and all_distance
-            self.distance.distances[0].update(new_all_parameters, new_all_data)
-            distances = np.array([self.distance.distance(data, self.accepted_parameters_manager.observations_bds.value()) for data in accepted_data])
-            all_distances = np.array([self.distance.distance(data, self.accepted_parameters_manager.observations_bds.value()) for data in new_all_data])
+            self.logger.info("Updating distance")
+            self.distance.distances[0].update(accepted_parameters, accepted_data, self.backend)
 
-            # 2: Smoothing of the distances
-            #smooth_distances = self._smoother_distance(distances, all_distances)
-            smooth_distances = distances
+            # Recompute distances in a parallelized fashion, then broadcast
+            self.logger.info("Recomputing distances from observed data")
+            def distancecompute(data): return self.distance.distance(data, self.accepted_parameters_manager.observations_bds.value())
+            data_pds = self.backend.parallelize(accepted_data)
+            dists_pds = self.backend.map(distancecompute, data_pds)
+            distances = np.array(self.backend.collect(dists_pds))
+            self._update_broadcasts(distances=distances)
 
-            # 3: Initialize/Update U, epsilon and covariance of perturbation kernel
-            if aStep == 0:
-                U = self._average_redefined_distance(self._smoother_distance(all_distances, all_distances), epsilon)
-            else:
-                U = np.mean(smooth_distances)
-            epsilon = self._schedule(U, v)
-
+            # 2: Compute epsilon
+            U = np.mean(distances)
+            # epsilon = self._schedule(U, v)
+            epsilon = np.percentile(distances, .1 * 100)
+            print(epsilon)
             # 4: Show progress and if acceptance rate smaller than a value break the iteration
             if aStep > 0:
                 accept = accept + np.sum(acceptance)
@@ -392,7 +388,7 @@ class SABC(BaseDiscrepancy, InferenceMethod):
                 msg = ("updates= {:.2f}, epsilon= {}, u.mean={:e}, acceptance rate: {:.2f}"
                         .format(
                             np.sum(sample_array[1:aStep + 1]) / np.sum(sample_array[1:]) * 100,
-                            epsilon, U, acceptance_rate
+                            epsilon, 1, acceptance_rate
                             )
                         )
                 self.logger.debug(msg)
@@ -404,16 +400,17 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             # 5: Resampling if number of accepted particles greater than resample
             if accept >= resample and U > 1e-100:
                 self.logger.info("Weighted resampling")
-                weight = np.exp(-smooth_distances * delta / U)
+                weight = np.exp(-distances * delta / U)
                 weight = weight / sum(weight)
                 index_resampled = self.rng.choice(np.arange(n_samples, dtype=int), n_samples, replace=1, p=weight)
                 accepted_parameters = [accepted_parameters[i] for i in index_resampled]
-                smooth_distances = smooth_distances[index_resampled]
+                distances = distances[index_resampled]
 
                 ## Update U and epsilon:
-                epsilon = epsilon * (1 - delta)
-                U = np.mean(smooth_distances)
-                epsilon = self._schedule(U, v)
+                # epsilon = epsilon * (1 - delta)
+                U = np.mean(distances)
+                # epsilon = self._schedule(U, v)
+                epsilon = np.percentile(distances, .1 * 100)
 
                 ## Print effective sampling size
                 print('Resampling: Effective sampling size: ', 1 / sum(pow(weight / sum(weight), 2)))
@@ -557,15 +554,13 @@ class SABC(BaseDiscrepancy, InferenceMethod):
 
         return (epsilon)
 
-    def _update_broadcasts(self, smooth_distances, all_distances):
+    def _update_broadcasts(self, distances):
         def destroy(bc):
             if bc != None:
                 bc.unpersist
                 # bc.destroy
-        if not smooth_distances is None:
-            self.smooth_distances_bds = self.backend.broadcast(smooth_distances)
-        if not all_distances is None:
-            self.all_distances_bds = self.backend.broadcast(all_distances)
+        if not distances is None:
+            self.distances_bds = self.backend.broadcast(distances)
 
     # define helper functions for map step
     def _accept_parameter(self, data, npc=None):
@@ -588,9 +583,6 @@ class SABC(BaseDiscrepancy, InferenceMethod):
         rng=data[0]
         index=data[1]
         rng.seed(rng.randint(np.iinfo(np.uint32).max, dtype=np.uint32))
-        all_data = []
-        all_parameters = []
-        all_distances = []
         acceptance = 0
 
         counter = 0
@@ -600,12 +592,9 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             while acceptance == 0:
                 self.sample_from_prior(rng=rng)
                 new_theta = self.get_parameters()
-                all_parameters.append(new_theta)
                 y_sim = self.simulate(self.n_samples_per_param, rng=rng, npc=npc)
                 counter+=1
                 distance = self.distance.distance(self.accepted_parameters_manager.observations_bds.value(), y_sim)
-                all_distances.append(distance)
-                all_data.append(y_sim)
                 acceptance = rng.binomial(1, np.exp(-distance / self.epsilon), 1)
             acceptance = 1
         else:
@@ -619,18 +608,14 @@ class SABC(BaseDiscrepancy, InferenceMethod):
                 if perturbation_output[0] and self.pdf_of_prior(self.model, perturbation_output[1]) != 0:
                     new_theta = perturbation_output[1]
                     break
-            all_parameters.append(new_theta)
             y_sim = self.simulate(self.n_samples_per_param, rng=rng, npc=npc)
             counter+=1
             distance = self.distance.distance(self.accepted_parameters_manager.observations_bds.value(), y_sim)
-            all_data.append(y_sim)
-            #smooth_distance = self._smoother_distance([distance], self.all_distances_bds.value())
 
             ## Calculate acceptance probability:
             ratio_prior_prob = self.pdf_of_prior(self.model, perturbation_output[1]) / self.pdf_of_prior(self.model,
                 self.accepted_parameters_manager.accepted_parameters_bds.value()[index])
-            #ratio_likelihood_prob = np.exp((self.smooth_distances_bds.value()[index] - smooth_distance) / self.epsilon)
-            ratio_likelihood_prob = np.exp((self.smooth_distances_bds.value()[index] - distance) / self.epsilon)
+            ratio_likelihood_prob = np.exp((self.distances_bds.value()[index] - distance) / self.epsilon)
             acceptance_prob = ratio_prior_prob * ratio_likelihood_prob
 
             ## If accepted
@@ -639,4 +624,4 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             else:
                 distance = np.inf
 
-        return (new_theta, y_sim, distance, all_parameters, all_data, all_distances, index, acceptance, counter)
+        return (new_theta, y_sim, distance, index, acceptance, counter)
