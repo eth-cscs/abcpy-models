@@ -113,7 +113,7 @@ if abc_method=='sabc':
     print('SABC Inferring')
     
     ## We use resultfakeobs1 as our observed dataset
-    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=20, n_samples_per_param=1,
+    journal_sabc1 = sampler.sample([resultfakeobs1], steps=4, epsilon=40, n_samples=30, n_samples_per_param=1,
                                    beta=2, \
                                    delta=0.2, v=0.3, ar_cutoff=0.001, resample=None, n_update=None, full_output=1)
     print(journal_sabc1.posterior_mean())

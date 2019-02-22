@@ -1,6 +1,7 @@
 import copy
 import logging
 import numpy as np
+import pickle, random, string, os
 
 import sys, itertools
 
@@ -334,16 +335,13 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             self.logger.info("Initial accepted parameters")
             params_and_dists_pds = self.backend.map(self._accept_parameter, data_pds)
             params_and_dists = self.backend.collect(params_and_dists_pds)
-            new_parameters, new_data, new_distances, index, acceptance, counter = [list(t) for t in
-                                                                                                       zip(
-                                                                                                           *params_and_dists)]
+            new_parameters, filenames, index, acceptance, counter = [list(t) for t in zip(*params_and_dists)]
 
             # Keeping counter of number of simulations
             for count in counter:
                 self.simulation_counter+=count
 
             #new_parameters = np.array(new_parameters)
-            new_distances = np.array(new_distances)
             index = np.array(index)
             acceptance = np.array(acceptance)
 
@@ -355,29 +353,21 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             # Initialize/Update the accepted parameters and their corresponding distances
             if accepted_parameters is None:
                 accepted_parameters = new_parameters
-                accepted_data = new_data
             else:
                 for ind in range(len(acceptance)):
                     if acceptance[ind] == 1:
                         accepted_parameters[index[ind]] = new_parameters[ind]
-                        accepted_data[index[ind]] = new_data[ind]
 
-            # 1.5: Update the distance, recompute distance and all_distance
+            # 1.5: Update the distance and recompute distances from observed data
             self.logger.info("Updating distance")
-            self.distance.distances[0].update(accepted_parameters, accepted_data, self.backend)
-
-            # Recompute distances in a parallelized fashion, then broadcast
-            self.logger.info("Recomputing distances from observed data")
-            def distancecompute(data): return self.distance.distance(data, self.accepted_parameters_manager.observations_bds.value())
-            data_pds = self.backend.parallelize(accepted_data)
-            dists_pds = self.backend.map(distancecompute, data_pds)
-            distances = np.array(self.backend.collect(dists_pds))
+            distances = self.distance.distances[0].update(filenames, self.accepted_parameters_manager.observations_bds.value(), self.backend)
             self._update_broadcasts(distances=distances)
 
             # 2: Compute epsilon
-            U = np.mean(distances)
-            # epsilon = self._schedule(U, v)
-            epsilon = np.percentile(distances, .1 * 100)
+            U = self._average_redefined_distance(distances, epsilon * (1 - delta))
+            epsilon = self._schedule(U, v)
+            #U = np.mean(distances)
+            #epsilon = np.percentile(distances, .1 * 100)
             print(epsilon)
             # 4: Show progress and if acceptance rate smaller than a value break the iteration
             if aStep > 0:
@@ -388,7 +378,7 @@ class SABC(BaseDiscrepancy, InferenceMethod):
                 msg = ("updates= {:.2f}, epsilon= {}, u.mean={:e}, acceptance rate: {:.2f}"
                         .format(
                             np.sum(sample_array[1:aStep + 1]) / np.sum(sample_array[1:]) * 100,
-                            epsilon, 1, acceptance_rate
+                            epsilon, U, acceptance_rate
                             )
                         )
                 self.logger.debug(msg)
@@ -407,10 +397,12 @@ class SABC(BaseDiscrepancy, InferenceMethod):
                 distances = distances[index_resampled]
 
                 ## Update U and epsilon:
-                # epsilon = epsilon * (1 - delta)
-                U = np.mean(distances)
-                # epsilon = self._schedule(U, v)
-                epsilon = np.percentile(distances, .1 * 100)
+                # # epsilon = epsilon * (1 - delta)
+                # U = np.mean(distances)
+                # # epsilon = self._schedule(U, v)
+                # epsilon = np.percentile(distances, .1 * 100)
+                U = self._average_redefined_distance(distances, epsilon * (1 - delta))
+                epsilon = self._schedule(U, v)
 
                 ## Print effective sampling size
                 print('Resampling: Effective sampling size: ', 1 / sum(pow(weight / sum(weight), 2)))
@@ -624,4 +616,7 @@ class SABC(BaseDiscrepancy, InferenceMethod):
             else:
                 distance = np.inf
 
-        return (new_theta, y_sim, distance, index, acceptance, counter)
+        filename = os.getcwd() + '/tmp/' + ''.join([random.choice(string.ascii_letters + string.digits) for n in range(32)])
+        with open(filename, 'wb') as fp: pickle.dump([new_theta, y_sim], fp)
+
+        return (new_theta, filename, index, acceptance, counter)

@@ -1,6 +1,6 @@
 from abcpy.distances import Distance
 import copy
-import math
+import math, pickle, subprocess, os
 import numpy as np
 from itertools import combinations
 
@@ -143,14 +143,15 @@ class DistanceWeighted(Distance):
         Max = np.array([self.D1.dist_max(), self.D2.dist_max(), self.D3.dist_max(), self.D4.dist_max()])
         return sum(self.weight * Max)
 
-    def update(self, new_all_parameters, new_all_data, backend):
-        len_to_use = min(len(new_all_parameters), 5000)
+    def update(self, filenames, obs_data, backend):
+        len_to_use = min(len(filenames), 5000)
+        new_all_parameters, new_all_data = [], []
+        random_indices = np.random.randint(len(filenames), size=len_to_use)
+        for indices in random_indices:
+            with open(filenames[indices], 'rb') as fp: itemlist = pickle.load(fp)
+            new_all_parameters += [itemlist[0]]
+            new_all_data += [itemlist[1]]
 
-        random_indices = np.random.randint(len(new_all_parameters), size=len_to_use)
-        new_all_parameters = [new_all_parameters[indices] for indices in random_indices]
-        new_all_data = [new_all_data[indices] for indices in random_indices]
-
-        import itertools as it
         def compute_pairwise_distance(input):
             # # Compute Euclidean distances which parameters
             # # Compute distances using all 4 different distances
@@ -187,7 +188,18 @@ class DistanceWeighted(Distance):
         # clf.fit(np.array(data_distance), np.array(param_distance))
         # self.weight = np.array(clf.coef_)
         self.weight = res.x / sum(res.x)
-        return self.weight
+        print(self.weight)
+        # Recompute distances from observed data
+        def distancecompute(filename):
+            with open(filename, 'rb') as fp: itemlist = pickle.load(fp)
+            return self.distance(obs_data[0], itemlist[1][0])
+
+        data_pds = backend.parallelize(filenames)
+        dists_pds = backend.map(distancecompute, data_pds)
+        distances = np.array(backend.collect(dists_pds))
+        # Remove all the files from tmp
+        subprocess.run('rm -r *', shell=True, cwd=os.getcwd() + '/tmp')
+        return distances
 
 
 class DistanceType1(Distance):
@@ -439,7 +451,7 @@ class DistanceType3(Distance):
 
 class DistanceType4(Distance):
     """
-    This distance is simply the Euclidean distance between the heatmaps
+    This distance is simply the Euclidean distance between the position of the pedestrians
     The Euclidean distance between each observation and each simulation is computed
     The final outcome is the average difference for each cell among simulation and observation
 
