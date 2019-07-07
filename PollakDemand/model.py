@@ -58,7 +58,7 @@ class PollakDemand(ProbabilisticModel, Continuous):
     def get_output_dimension(self):
         return 1
 
-    def forward_simulate(self, input_values, rng= np.random.RandomState()  ):
+    def forward_simulate(self, input_values, k, rng=np.random.RandomState(), mpi_comm=None):
         
         #Extract input parameters
         gamma = input_values[0]
@@ -70,7 +70,7 @@ class PollakDemand(ProbabilisticModel, Continuous):
         eval_param = self.eval_param
         
         #Do the actual forward simulation
-        arr_estimated_output = self.generative_step(gamma, delta, sigma, ln_loc, ln_scale, ln_scale_underlying)
+        arr_estimated_output = self.generative_step(gamma, delta, sigma, ln_loc, ln_scale, ln_scale_underlying, k)
         
         if eval_param == 'return':
             #calculate a sample of revenue
@@ -84,11 +84,11 @@ class PollakDemand(ProbabilisticModel, Continuous):
         result = [np.array([x]) for x in arr_eval_param]
         return result
 
-    def generative_step(self, gamma, delta, sigma, ln_loc, ln_scale, ln_scale_underlying):
+    def generative_step(self, gamma, delta, sigma, ln_loc, ln_scale, ln_scale_underlying, k):
         
         #Drawing 10000 samples form a log-normal distirbution for \phi with parameter \ln_loc, \ln_scale, ln_scale_underlying
         #This is the sample size for the generated output x during a forward simulation step of the ABC algorithm
-        sample_size_phi= 10000
+        sample_size_phi= k
         arr_phi = spstat.lognorm.rvs(s=ln_scale_underlying, loc=ln_loc , scale=ln_scale, size=sample_size_phi, random_state=random_state)
 
         #Creating array to hold phi and associated params e.g. gamma, delta, sigma
@@ -97,11 +97,11 @@ class PollakDemand(ProbabilisticModel, Continuous):
 
         #Learns the inv function, and use it estimate values of x corresponding to our array of \phi, \gamma, \delta, \sigma
         #This is the sample size used by the neural network to estimate the inv function x(\phi)
-        sample_size_output=2500
+        sample_size_output=5000
         arr_estimated_output = self.approximate_inv_fun(gamma, delta, sigma, sample_size_output, arr_data.astype(np.float32))
         
-        plt.plot(arr_estimated_output.tolist()[:200], arr_phi.tolist()[:200])
-        plt.savefig('estimated_function.pdf')
+        #plt.plot(arr_estimated_output.tolist()[:200], arr_phi.tolist()[:200], '.')
+        #plt.savefig('estimated_function.pdf')
 
         return arr_estimated_output
 
@@ -110,13 +110,20 @@ class PollakDemand(ProbabilisticModel, Continuous):
         #draw samples from X as Uniform
         #TODO:The upper and lower bound need to be changed to reflect real data
         print('Generating a sample of x from uniform and \phi from x. \nSample to be used to calculate local inverse function x from \phi given values for gamma, delta and sigma')
-        arr_x = np.random.uniform(low=6, high=8, size=sample_size)
+
+        # Following ub and lb is chosen s.t. phi is positive
+        lb = (gamma*sigma)/(sigma-1)
+        ub = (gamma*sigma)/(sigma-1) + ((gamma*sigma)/(sigma-1)- gamma)
+
+        arr_x = np.random.uniform(low=lb, high=ub, size=sample_size)
 
         #calc a sample of phi from x
         arr_phi = ( ((arr_x-gamma)/delta)**((1+sigma)/sigma) ) * (delta*sigma)/(arr_x*(sigma-1)-(gamma*sigma))
 
-        # plt.plot(arr_x, arr_phi)
-        # plt.show()
+        plt.figure()
+        plt.plot(arr_x, arr_phi, 'b.')
+        plt.xlabel('x')
+        plt.ylabel('y')
 
         #creating NN model to estimate inv_func x(\phi)
         arr_vars = np.array([gamma, delta, sigma]).repeat(sample_size).reshape(3,-1).T 
@@ -136,6 +143,12 @@ class PollakDemand(ProbabilisticModel, Continuous):
 
         tf.set_random_seed(25)
         arr_estimated_output = self.train_neural_network(x_train, y_train, x_val, y_val, x_test, y_test, data_to_predict)
+
+        plt.plot(arr_estimated_output, data_to_predict[:,0], 'r.')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.show()
+
 
         return arr_estimated_output
 
