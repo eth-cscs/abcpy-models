@@ -1,0 +1,178 @@
+#!/usr/bin/env python 
+###########################################################
+# Configuration file for the compilation of tetras and piaf libraries,
+# IT IS NOT RECOMMENDED TO MODIFY THIS FILE.
+# Compilation should be personalized by adjusting the 
+# Makefile in the directory of the main source files.
+###########################################################
+
+import os
+import sys
+import glob
+import ntpath
+import subprocess
+argdict = dict(ARGLIST)
+
+# Read input parameters
+TMMRoot   = argdict['TMMRoot']
+optimize      = argdict['optimize'].lower() == 'true'
+debug         = argdict['debug'].lower() == 'true'
+profile       = argdict['profile'].lower() == 'true'
+parallelCXX   = argdict['parallelCXX']
+compileFlags  = Split(argdict['compileFlags'])
+linkFlags     = Split(argdict['linkFlags'])
+optimFlags    = Split(argdict['optimFlags'])
+debugFlags    = Split(argdict['debugFlags'])
+profileFlags  = Split(argdict['profileFlags'])
+libraryPaths  = Split(argdict['libraryPaths'])
+includePaths  = Split(argdict['includePaths'])
+libraries     = Split(argdict['libraries'])
+excludedDirs  = Split(argdict['excludedDirs'])
+useStaticLink = argdict['useStaticLink'].lower() == 'true'
+
+try:
+    srcPaths = Split(argdict['srcPaths'])
+except:
+    srcPaths = []
+
+################ create version.h ######################
+## call date command ##
+#p = subprocess.Popen("git describe --long --abbrev=12", stdout=subprocess.PIPE, shell=True)
+p = subprocess.Popen("git log --date=short -1 --pretty=format:'%ad %H %d'", stdout=subprocess.PIPE, shell=True)
+(output, err) = p.communicate()
+f = open('tetras/src/version.h', 'w')
+if(output):
+        current_version="#define VERSION \""+str(output.rstrip())+"\""
+        f.write(current_version)
+else:
+        f.write(err)
+f.close()
+
+########### options ############
+flags = compileFlags
+if optimize:
+    flags.append(optimFlags)
+if debug:
+    flags.append(debugFlags)
+if profile:
+    flags.append(profileFlags)
+    linkFlags.append(profileFlags)
+
+#if MPIparallel:
+compiler = parallelCXX
+#flags.append('-DPLB_MPI_PARALLEL')
+#else:
+#    compiler = serialCXX
+
+useMuscle=True
+filesUsingMuscle=[]
+if('-DMUSCLE' not in flags):
+	useMuscle=False
+	filesUsingMuscle.append('distributedsimulation.cpp')
+	filesUsingMuscle.append('distributedsimulation.h')
+	filesUsingMuscle.append('musclemapper.h')
+	filesUsingMuscle.append('musclemapper.cpp')
+	filesUsingMuscle.append('muscleconnectors.h')
+	filesUsingMuscle.append('muscleconnectors.cpp')
+	filesUsingMuscle.append('interpoler.cpp')
+	if('muscle2' in libraries):
+		libraries.remove ('muscle2')
+#*************************************** Get subDirs **************************************************
+
+def getRecursiveDir(srcDir, excludedDirs):
+	res=[]
+	for root, dirs, files in os.walk(srcDir):
+        	if (ntpath.basename(root) not in excludedDirs):
+                	res.append(root)
+	return res
+
+def getFiles(extension, subDirs, excludedFiles):
+	cppFiles=[]
+	for srcDir in subDirs:
+		for f in glob.glob(srcDir+'/*.'+extension):
+			if (os.path.basename(f) not in excludedFiles):
+				cppFiles.append(f)		
+	return  cppFiles
+
+
+
+tetrasSubDirs= getRecursiveDir('./tetras/src/Tools', excludedDirs)  + getRecursiveDir('./tetras/src/Models', excludedDirs)
+PiafIncludeSubDirs= getRecursiveDir('./tetras/include', excludedDirs) + [x[0] for x in os.walk('piaf/include/')]
+PiafSrcSubDirs = [x[0] for x in os.walk('piaf/src/')]
+
+#*************************************** Get c++ hh files *********************************************
+#print " ================= tetras: ==========================="
+tetrasSourceFiles = getFiles('cpp', tetrasSubDirs, filesUsingMuscle)
+tetrasHeaderFiles = getFiles('hpp', tetrasSubDirs, filesUsingMuscle) +  getFiles('h', tetrasSubDirs, filesUsingMuscle)
+#print " ================= piaf: ==========================="
+PiafSourceFiles = getFiles('cpp', PiafSrcSubDirs, filesUsingMuscle)
+PiafHeaderFiles = getFiles('hpp', PiafSrcSubDirs, filesUsingMuscle) + getFiles('h', PiafSrcSubDirs, filesUsingMuscle)
+#print " ================== 	=========================="
+
+#*******************************************Configure Env**************************************
+
+allPaths = ['.'] +[TMMRoot]+[TMMRoot+'/muscleHPC/include/']+ includePaths+ tetrasSubDirs + PiafIncludeSubDirs
+
+#print 'librarry path=', libraryPaths
+
+env = Environment ( ENV       = os.environ,
+                    CXX       = compiler,
+                    CXXFLAGS  = flags,
+                    LINKFLAGS = linkFlags,
+                    CPPPATH   = allPaths,
+		    LIBPATH=libraryPaths,
+		    LIBS = libraries
+                  )
+
+#option to generate both static and dynamic libraries while compiling
+env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']=1
+
+#*******************************************Generate libs**************************************
+lib_piaf_name='piaf_mpi'
+lib_tetras_name='tetras_mpi'
+libs_location_gen='lib'
+
+generated_libs = [] 
+piaf_library_dy = env.SharedLibrary( target  = os.path.join(TMMRoot, libs_location_gen, lib_piaf_name) ,
+                                  source  = PiafSourceFiles + PiafHeaderFiles, CPPPATH=allPaths )
+piaf_library_st = env.Library( target  = os.path.join(TMMRoot, libs_location_gen, lib_piaf_name) ,
+				source  = PiafSourceFiles, CPPPATH=allPaths)
+
+tetras_library_dy = env.SharedLibrary( target  = os.path.join(TMMRoot, libs_location_gen, lib_tetras_name) ,
+                                  source  = tetrasSourceFiles, CPPPATH=allPaths )
+tetras_library_st = env.Library( target  = os.path.join(TMMRoot, libs_location_gen, lib_tetras_name) ,
+                                  source  = tetrasSourceFiles, CPPPATH=allPaths )
+
+#if (useStaticLink):
+#	piaf_obj   = piaf_library_st
+#	tetras_obj = tetras_library_st
+#
+#	# The order is Important !!
+#	if(useMuscle):
+#		LibsOrderLink=tetras_obj +  piaf_obj
+#	else:
+#		LibsOrderLink=tetras_obj + piaf_obj 
+#else:
+#	piaf_obj   = piaf_library_dy
+#	tetras_obj = tetras_library_dy
+#
+#	# The order is Important !!
+#	if(useMuscle):
+#		LibsOrderLink=piaf_obj + tetras_obj
+#	else:
+#		LibsOrderLink=piaf_obj + tetras_obj
+
+#******************************************* compile binaries ************************************
+
+generateBinaries = argdict['generateBinaries'].lower() == 'true'
+print('\n[Generate binaries]:	', generateBinaries)
+if generateBinaries:
+	SConscript('./SConscript_mono',exports='env')
+
+
+
+
+
+
+
+

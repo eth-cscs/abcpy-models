@@ -1,0 +1,61 @@
+plumeModel,     wim
+
+velocities, tetras_wind_and_wim_plume_gaussian, tetras_sedimentation, tetras_diffusion_wim_gaussian, tetras_umbrella_cloud
+
+ventPosition,         0, 0, 2500
+ventLatLong,          0.035227, -78.465633
+
+# eruption events
+#             start time, duration
+eruptionEvent, 0, 9960
+
+#columnHorizontalDiffusion,       1500
+#columnVerticalDiffusion,         3000
+
+columnHorizontalDiffusion,       3000
+columnVerticalDiffusion,         3000
+
+eccentricity,         0.0
+focusSource,          0, 0
+
+# particle families
+#       phi,  wtpct,   density
+family, -7,   0.139,   600
+family, -6,   0.4,     600
+family, -5,   1.65,    600
+family, -4,   3.27,    600
+family, -3,   5.96,    600
+family, -2,   9.346,   600
+family, -1,   12.756,  600
+family, 0,    16.72,   600
+family, 1,    21.037,  600
+family, 2,    18.871,  600
+family, 3,    7.089,   600
+family, 4,    1.082,   600
+family, 5,    0.603,   600
+family, 6,    0.716,   600
+family, 7,    0.26,    600
+family, 8,    0.082,   600
+family, 9,    0.016,   600
+family, 10,   0.003,   600
+
+
+
+# atmosphere
+windModel,  files
+tropopause,     16000
+stratosphere,   24000
+temperatureASL,       288
+pressureASL,          101325
+
+#atmosphereHorizontalDiffusion, 300
+#atmosphereVerticalDiffusion, 150
+
+atmosphereHorizontalDiffusion, 500
+atmosphereVerticalDiffusion, 500
+
+# wind
+wind,      0,          wind-pululagua-0.csv
+
+plume, 0, plume-pululagua-0.csv
+

@@ -1,0 +1,11 @@
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+tetras
+tetrascontinent
+log
+CMakeFiles/
+*.h5
+version
+cxa
+lightvolcano

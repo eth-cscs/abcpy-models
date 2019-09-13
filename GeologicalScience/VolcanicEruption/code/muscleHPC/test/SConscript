@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+# /**
+# * @author  Mohamed Ben Belgacem <Mohamed.BenBelgacem@gmail.com>
+#
+# * MUSCLE-HPC communication module
+# * Copyright (C) 2016  University of Geneva, Switzerland
+# *
+# * MUSCLE-HPC is free software: you can redistribute it and/or
+# * modify it under the terms of the GNU Affero General Public License as
+# * published by the Free Software Foundation, either version 3 of the
+# * License, or (at your option) any later version.
+# *
+# * The library is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# * GNU Affero General Public License for more details.
+# *
+# * You should have received a copy of the GNU Affero General Public License
+# * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# */
+
+
+###########################################################
+# Configuration file for the compilation of tetras code,
+# (inspired from the Palabos one).
+# using the SConstruct library.
+# IT IS NOT RECOMMENDED TO MODIFY THIS FILE.
+# Compilation should be personalized by adjusting the
+# Makefile in the directory of the main source files.
+# See Palabos examples for sample Makefiles.
+###########################################################
+
+import os
+import sys
+import glob
+import ntpath
+import subprocess
+argdict = dict(ARGLIST)
+
+#*************************************** Get subDirs **************************************************
+
+def getRecursiveDir(srcDir, excludedDirs):
+	res=[]
+	for root, dirs, files in os.walk(srcDir):
+        	if (ntpath.basename(root) not in excludedDirs):
+                	res.append(root)
+	return res
+
+def getFiles(extension, subDirs, excludedFiles):
+	cppFiles=[]
+	for srcDir in subDirs:
+			for f in glob.glob(srcDir+'/*.'+extension):
+				if (os.path.basename(f) not in excludedFiles):
+					cppFiles.append(f)
+	return  cppFiles
+
+
+
+
+SrcCommDir='.'
+CommunicationSubDirs= list( set([ SrcCommDir]) )
+#*************************************** Get c++ hh files *********************************************
+filesUsingMuscle=[]
+CommunicationSourceFiles = getFiles('cpp', CommunicationSubDirs, filesUsingMuscle)
+
+#*******************************************Configure Env**************************************
+Import('env')
+#VariantDir('build', 'test')
+musclehpcRoot='../'
+allPaths = [musclehpcRoot]+[musclehpcRoot+'include/']+  CommunicationSubDirs
+env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']=1
+
+
+if 'LIBS' in env:
+	libraries=['musclehpc']+env['LIBS']
+else:
+	libraries=['musclehpc', 'boost_regex', 'boost_program_options']
+
+if 'CPPPATH' in env:
+	allPaths = allPaths + env['CPPPATH']
+
+env.Replace(CPPPATH = allPaths)
+
+
+env_mapper=env.Clone()
+
+libraryPaths=['../lib']+env['LIBPATH']
+
+# ----- compile examples -----
+# == mpiring==
+envInterpoler=env.Clone()
+ringObj= envInterpoler.Object(source =  [musclehpcRoot+'/test/mpiring/example1/mpiring_async.cpp'])
+envInterpoler.Program(musclehpcRoot+"/test/mpiring/example1/mpiring_async", ringObj, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+
+ringDataObj= envInterpoler.Object(source =  [musclehpcRoot+'/test/mpiring/example2/mpiringData_async.cpp'])
+envInterpoler.Program(musclehpcRoot+"/test/mpiring/example2/mpiringData_async", ringDataObj, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+
+# == Broadcast==
+bCastObj= envInterpoler.Object(source =  [musclehpcRoot+'/test/broadcast/example1/broadcast.cpp'])
+envInterpoler.Program(musclehpcRoot+'/test/broadcast/example1/broadcast', bCastObj, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+bCastdata= envInterpoler.Object(source =  [musclehpcRoot+'/test/broadcast/example2/broadcastData.cpp'])
+envInterpoler.Program(musclehpcRoot+'/test/broadcast/example2/broadcastData', bCastdata, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+# == 3 submodels==
+submodels_3= envInterpoler.Object(source =  [musclehpcRoot+'/test/3_submodels/sample3submodels.cpp'])
+envInterpoler.Program(musclehpcRoot+'/test/3_submodels/sample3submodels', submodels_3, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+# == heat equation 2D ==
+submodels_3= envInterpoler.Object(source =  [musclehpcRoot+'/test/heatEquation_2D/2d_heat_equation.cpp'])
+envInterpoler.Program(musclehpcRoot+'/test/heatEquation_2D/2d_heat_equation', submodels_3, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)
+# == benchmark==
+BenchObj= envInterpoler.Object(source =  [musclehpcRoot+'/test/benchmark/benchmark.cpp'])
+envInterpoler.Program(musclehpcRoot+'/test/benchmark/benchmark', BenchObj, LIBS=libraries, LIBPATH=libraryPaths, CPPPATH=allPaths)

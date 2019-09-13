@@ -1,0 +1,87 @@
+#!/usr/bin/env python
+# /**
+# * @author  Mohamed Ben Belgacem <Mohamed.BenBelgacem@gmail.com>
+#
+# * MUSCLE-HPC communication module
+# * Copyright (C) 2016  University of Geneva, Switzerland
+# *
+# * MUSCLE-HPC is free software: you can redistribute it and/or
+# * modify it under the terms of the GNU Affero General Public License as
+# * published by the Free Software Foundation, either version 3 of the
+# * License, or (at your option) any later version.
+# *
+# * The library is distributed in the hope that it will be useful,
+# * but WITHOUT ANY WARRANTY; without even the implied warranty of
+# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# * GNU Affero General Public License for more details.
+# *
+# * You should have received a copy of the GNU Affero General Public License
+# * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# */
+
+import os
+import sys
+import glob
+import ntpath
+import subprocess
+argdict = dict(ARGLIST)
+
+
+
+#*************************************** Get subDirs **************************************************
+
+def getRecursiveDir(srcDir, excludedDirs):
+	res=[]
+	for root, dirs, files in os.walk(srcDir):
+        	if (ntpath.basename(root) not in excludedDirs):
+                	res.append(root)
+	return res
+
+def getFiles(extension, subDirs, excludedFiles):
+	cppFiles=[]
+	for srcDir in subDirs:
+			for f in glob.glob(srcDir+'/*.'+extension):
+				if (os.path.basename(f) not in excludedFiles):
+					cppFiles.append(f)
+	return  cppFiles
+
+#*************************************** Get c++ hh files *********************************************
+
+filesUsingMuscle=[]
+SrcCommDir='.'
+CommunicationSubDirs= list( set([  SrcCommDir+'/conduits',   SrcCommDir+'connectors',  SrcCommDir+'/mediator',  SrcCommDir+'/mapper',  SrcCommDir+'/parallelism',  SrcCommDir+'/utils']) )
+CommunicationSourceFiles = getFiles('cpp', CommunicationSubDirs, filesUsingMuscle)
+
+# For generating a a dynamic library so
+muscleHPCSourceDir= CommunicationSubDirs
+muscleHPCSourceFiles = getFiles('cpp', muscleHPCSourceDir, filesUsingMuscle)+ getFiles('hpp', muscleHPCSourceDir, filesUsingMuscle) + getFiles('hh', muscleHPCSourceDir, filesUsingMuscle)
+muscleHPCtHeaderFiles = getFiles('h', muscleHPCSourceDir, filesUsingMuscle)
+
+#*******************************************Configure Env**************************************
+Import('env')
+#VariantDir('build', 'src')
+musclehpcRoot='../'
+allPaths = [musclehpcRoot]+[musclehpcRoot+'/include/']+  CommunicationSubDirs  + muscleHPCSourceDir
+
+env['STATIC_AND_SHARED_OBJECTS_ARE_THE_SAME']=1
+#*******************************************Generate libs**************************************
+
+lib_mapper_name='musclehpc'
+libs_location_gen='lib'
+
+libs_mapper=['boost_regex', 'boost_program_options']
+
+
+if 'LIBS' in env:
+        libs_mapper=libs_mapper+env['LIBS']
+
+if 'CPPPATH' in env:
+        allPaths = allPaths + env['CPPPATH']
+
+env_mapper=env.Clone(LIBS=libs_mapper)
+
+# mapper lib
+mapper_library_dy = env_mapper.SharedLibrary( target  = os.path.join(musclehpcRoot, libs_location_gen, lib_mapper_name) ,
+                                  source  = CommunicationSourceFiles , CPPPATH=allPaths )
+mapper_library_st = env_mapper.Library( target  = os.path.join(musclehpcRoot, libs_location_gen, lib_mapper_name) ,
+                                 source  = CommunicationSourceFiles , CPPPATH=allPaths )

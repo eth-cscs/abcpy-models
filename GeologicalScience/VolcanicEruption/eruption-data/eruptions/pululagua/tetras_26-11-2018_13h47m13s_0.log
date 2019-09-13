@@ -1,0 +1,23 @@
+tetras version 2018-11-22 ba9432adf56133124994c919d35a85078ecb9d9a  (HEAD -> abcpy, origin/abcpy)
+start simulation with 4 process
+ddt activated, ddt = 0.3
+topology used : MPI3DGrid with block in each dim = 5
+topology = 2,2,1
+num block local = 5,5,5
+block size = 2,2,4
+domain size = 20,20,20
+actual domain size = 20,20,20
+actual domain is 1 times larger than expected
+this simulation will use Woods plume model
+using isotropic diffusion
+Velocities used in this simulation : 
+  - tetras_sedimentation, isDiffusion() = 0
+  - tetras_umbrella_cloud, isDiffusion() = 0
+  - tetras_woods_plume, isDiffusion() = 0
+  - tetras_diffusion_woods, isDiffusion() = 1
+phi : [ -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ]
+diameter : [ 0.128, 0.064, 0.032, 0.016, 0.008, 0.004, 0.002, 0.001, 0.0005, 0.00025, 0.000125, 6.25e-05, 3.125e-05, 1.5625e-05, 7.8125e-06, 3.90625e-06, 1.95313e-06, 9.76563e-07, ]
+density : [ 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, 600, ]
+wtpcts : [ 0.139, 0.4, 1.65, 3.27, 5.96, 9.346, 12.756, 16.72, 21.037, 18.871, 7.089, 1.082, 0.603, 0.716, 0.26, 0.082, 0.016, 0.003, ]
+running with seed (for process 0, others have seed = seed + rank) = -1905732389
+1800000 particles will be injected

@@ -1,0 +1,11 @@
+__pycache__/*
+*.jrnl
+model.py
+slurm*out
+*.h5
+*.o
+*.so
+.ipynb_checkpoints/
+.idea/
+*eps-converted-to.pdf
+distance_learning/__pycache__/*

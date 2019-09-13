@@ -1,0 +1,58 @@
+plumeModel,     wim
+
+ventPosition,         0, 0, 2500
+
+# eruption events
+#             start time, duration
+#eruptionEvent, 0, 31285
+
+#columnHorizontalDiffusion,       1500
+#columnVerticalDiffusion,         3000
+
+columnHorizontalDiffusion,       3000
+columnVerticalDiffusion,         3000
+
+eccentricity,         0.0
+focusSource,          0, 0
+
+# particle families
+#       phi,  wtpct,   density
+family, -7,   0.139,   600
+family, -6,   0.4,     600
+family, -5,   1.65,    600
+family, -4,   3.27,    600
+family, -3,   5.96,    600
+family, -2,   9.346,   600
+family, -1,   12.756,  600
+family, 0,    16.72,   837.5
+family, 1,    21.037,  1075
+family, 2,    18.871,  1312.5
+family, 3,    7.089,   1550
+family, 4,    1.082,   1787.5
+family, 5,    0.603,   2025
+family, 6,    0.716,   2262.5
+family, 7,    0.26,    2500
+family, 8,    0.082,   2500
+family, 9,    0.016,   2500
+family, 10,   0.003,   2500
+
+
+
+# atmosphere
+windModel,  files
+tropopause,     16000
+stratosphere,   24000
+temperatureASL,       288
+pressureASL,          101325
+
+#atmosphereHorizontalDiffusion, 300
+#atmosphereVerticalDiffusion, 150
+
+atmosphereHorizontalDiffusion, 500
+atmosphereVerticalDiffusion, 500
+
+# wind
+wind,      0,          wind-pululagua-0.csv
+
+eruptionEvent, 0, 1000
+plume, 0, plume-pulu-r90u200-0.csv

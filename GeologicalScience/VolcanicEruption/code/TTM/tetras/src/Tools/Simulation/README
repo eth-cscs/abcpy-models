@@ -1,0 +1,18 @@
+INTRODUCTION
+
+tetras (tephra transport simulator) is a simulation tool designed to simulate the displacement of volcanic tephra in the atmosphere and its deposition on the ground. The simulator tracks the movement of individual particles in an advection field and rely on an hybrid eulerian/lagrangian schement to facilitate parallelisation.
+
+The implementation is separated in two parts : the piaf library (particles in advection field) and the simulator itself (tetras) which rely on this library. Thus, you have to first compile the piaf library in order to compile and run the simulator.
+
+REQUIREMENTS
+
+In order to compile and run the code, you will need :
+	A C++11 compiler (tested with g++ 4.6 an higher)
+	The HDF5 library
+	The Boost library
+	An MPI implementation
+	The cmake build tool
+
+The code has been tested successfully on some linux distributions (CentOS 5-5.5, Ubuntu 12.04-14.04) and should run on any recent distribution.
+
+

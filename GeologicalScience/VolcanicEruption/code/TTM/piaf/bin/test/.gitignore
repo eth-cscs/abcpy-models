@@ -1,0 +1,6 @@
+advectionDiffusion
+benchmark
+benchmark2
+*.h5
+*.log
+testEventLogger

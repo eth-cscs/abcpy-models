@@ -1,0 +1,6 @@
+conduit1<char>: S1.f_out -> S2.f_in
+conduit2<char>: S2.f_out -> S1.f_in
+cores<S1>:4
+cores<S2>:4
+cmdline<S1>: 200 200 2
+cmdline<S2>: 200 200 1

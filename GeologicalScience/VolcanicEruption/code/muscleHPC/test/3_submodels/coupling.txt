@@ -1,0 +1,10 @@
+conduit1<int>: S1.f_out -> G.f1_in
+conduit2<int>: S2.f_out -> G.f2_in
+conduit3<char>: G.f1_out -> S1.f_in 
+conduit4<char>: G.f2_out -> S2.f_in
+cores<S1>:4
+cores<S2>:4
+cores<G>:1
+cmdline<S1>:
+cmdline<S2>:
+cmdline<G>:

@@ -1,0 +1,14 @@
+*.pyc
+.sconsign.dblite
+lib/
+*.o
+*.os
+*.dat
+*.bmp
+test/3_submodels/sample3submodels
+test/benchmark/benchmark
+test/broadcast/example1/broadcast
+test/broadcast/example2/broadcastData
+test/heatEquation_2D/2d_heat_equation
+test/mpiring/example1/mpiring_async
+test/mpiring/example2/mpiringData_async

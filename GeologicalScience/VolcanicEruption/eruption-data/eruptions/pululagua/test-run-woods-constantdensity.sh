@@ -1,0 +1,1 @@
+mpirun -np 4 ~/GIT/mm/TTM/tetras/tetras -s EXACT -x 10000 -y 10000 -z 10000 -ox -5000 -oy -5000 -oz 0 -dx 500 -dt 0.5 -dx_t 500  -f pululagua2450BP-constantdensity-test.csv -npart 100000 -ddt -blockcyclic 5 -o pululagua-test-woods-constantdensity.h5 -id

@@ -1,0 +1,56 @@
+#!/usr/bin/env python 
+###########################################################
+# Configuration file for the compilation of tetras code,
+# (inspired from the Palabos one).
+# using the SConstruct library.
+# IT IS NOT RECOMMENDED TO MODIFY THIS FILE.
+# Compilation should be personalized by adjusting the 
+# Makefile in the directory of the main source files.
+# See Palabos examples for sample Makefiles.
+###########################################################
+
+import os
+import sys
+import glob
+import ntpath
+import subprocess
+argdict = dict(ARGLIST)
+
+
+#*******************************************Configure Env**************************************
+Import('env')
+
+
+tetras_prg_name='tetras/tetras'
+atmosphericplume_prg_name='tetras/atmosphericplume'
+atmosphericcontinent_prg_name='tetras/atmosphericcontinent'
+tetrascontinent_prg_name='tetras/tetrascontinent'
+volcano_prg_name='tetras/lightvolcano'
+
+env_mono=env.Clone()
+
+if 'LIBS' in env:
+	libraries= env['LIBS']+['tetras_mpi', 'piaf_mpi']
+	env_mono.Replace(LIBS = libraries)
+
+if 'LIBPATH' in env:
+	libraryPaths=['./lib']+env['LIBPATH']
+	env_mono.Replace(LIBPATH = libraryPaths)
+
+# ****************************************** generate mono binaries **************************
+# == tetras ==
+tetras_prg=env_mono.Object(source=['tetras/src/tetras.cpp'])
+env_mono.Program(tetras_prg_name, tetras_prg)
+# == atmospheric Plume ==
+atmosphericplume_prg = env_mono.Object(source=['tetras/src/atmosphericPlume.cpp'])
+env_mono.Program(atmosphericplume_prg_name, atmosphericplume_prg)
+# == tetrasContinent==
+tetrascontinent_prg=env_mono.Object(source=['tetras/src/tetrascontinent.cpp'])
+env_mono.Program(tetrascontinent_prg_name, tetrascontinent_prg)
+# == atmospheric continent ==
+atmosphericcontinent_prg = env_mono.Object(source=['tetras/src/atmosphericContinent.cpp'])
+env_mono.Program(atmosphericcontinent_prg_name, atmosphericcontinent_prg)
+# == LightVolcano example ==
+volcanoObj=env_mono.Object(source=['tetras/coupling/lightvolcano.cpp'])
+env_mono.Program(volcano_prg_name, volcanoObj)
+

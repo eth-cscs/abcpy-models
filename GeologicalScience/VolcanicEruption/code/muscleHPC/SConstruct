@@ -1,0 +1,66 @@
+#!/usr/bin/env python 
+###########################################################
+# Configuration file for the compilation of Muscle-HPC code,
+# using the SConstruct library.
+# IT IS NOT RECOMMENDED TO MODIFY THIS FILE.
+# Compilation should be personalized by adjusting the 
+# Makefile in the directory of the main source files.
+###########################################################
+
+import os
+import sys
+import glob
+import ntpath
+import subprocess
+argdict = dict(ARGLIST)
+
+# Read input parameters
+muscleHPCRoot   = argdict['muscleHPCRoot']
+optimize      = argdict['optimize'].lower() == 'true'
+debug         = argdict['debug'].lower() == 'true'
+profile       = argdict['profile'].lower() == 'true'
+parallelCXX   = argdict['parallelCXX']
+compileFlags  = Split(argdict['compileFlags'])
+linkFlags     = Split(argdict['linkFlags'])
+optimFlags    = Split(argdict['optimFlags'])
+debugFlags    = Split(argdict['debugFlags'])
+profileFlags  = Split(argdict['profileFlags'])
+libraryPaths  = Split(argdict['libraryPaths'])
+includePaths  = Split(argdict['includePaths'])
+libraries     = Split(argdict['libraries'])
+excludedDirs  = Split(argdict['excludedDirs'])
+useStaticLink = argdict['useStaticLink'].lower() == 'true'
+
+try:
+    srcPaths = Split(argdict['srcPaths'])
+except:
+    srcPaths = []
+
+########### options ############
+flags = compileFlags
+if optimize:
+    flags.append(optimFlags)
+if debug:
+    flags.append(debugFlags)
+if profile:
+    flags.append(profileFlags)
+    linkFlags.append(profileFlags)
+
+#if MPIparallel:
+compiler = parallelCXX
+
+allPaths = ['.'] +[muscleHPCRoot]+['../include/']+ includePaths
+
+
+env = Environment ( ENV       = os.environ,
+                    CXX       = compiler,
+                    CXXFLAGS  = flags,
+                    LINKFLAGS = linkFlags,
+                    CPPPATH   = allPaths,
+                    LIBPATH=libraryPaths,
+                    LIBS = libraries
+                  )
+
+SConscript('./src/SConscript',exports='env')
+SConscript('./test/SConscript',exports='env')
+#SConscript('./test/SConscript',exports='env', variant_dir='build/test', duplicate=1)
