@@ -1,0 +1,13 @@
+CC=g++
+
+# -D: GAUSSIAN or PARETO
+CFLAGS=-Wall --pedantic -O3 -std=c++11 -DSTAND_ALONE -DGAUSSIAN
+
+.PHONY: all clean
+all: model
+
+model: model.cpp
+	$(CC) model.cpp $(CFLAGS) -o $@ 
+
+clean:
+	rm model
