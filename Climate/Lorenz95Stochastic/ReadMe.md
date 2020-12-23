@@ -15,7 +15,7 @@ Journal of the Royal Meteorological Society, 131(606), 389–407. doi:10.1256/qj
 19(1), 127–143. doi:10.5194/npg-19-127-2012.
 
 ## Dependencies 
-- abcpy0.5.1
+- abcpy >= 0.5.1
 
 ## Setup
 You can run an example ABC inference scheme on Lorenz model by 'python3 LorenzInference.py'
