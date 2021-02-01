@@ -1,5 +1,6 @@
 import numpy as np
 from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnector
+import unittest
 
 
 class Ricker(ProbabilisticModel, Continuous):
@@ -22,7 +23,6 @@ class Ricker(ProbabilisticModel, Continuous):
 
         self.n_timestep = n_timestep
         # Parameter specifying the dimension of the return values of the distribution.
-        self.dimension = n_timestep
         super(Ricker, self).__init__(input_parameters, name)
 
     def forward_simulate(self, input_values, k, rng=np.random.RandomState()):
@@ -55,3 +55,21 @@ class Ricker(ProbabilisticModel, Continuous):
 
     def _check_output(self, values):
         return True
+
+    def get_output_dimension(self):
+        return self.n_timestep
+
+
+class RickerTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.log_r = 1
+        self.sigma = 1.5
+        self.phi = 0.4
+
+        self.model = Ricker([self.log_r, self.sigma, self.phi])
+        self.rng = np.random.RandomState(seed=42)
+
+    def test_forward_sim(self):
+        out = self.model.forward_simulate([self.log_r, self.sigma, self.phi], k=2, rng=self.rng)
+        self.assertEqual(len(np.where(out[0])[0]), 13)
+        self.assertTrue(np.allclose(np.where(out[0]), np.array([1, 28, 30, 35, 36, 38, 42, 43, 47, 49, 55, 60, 74])))
