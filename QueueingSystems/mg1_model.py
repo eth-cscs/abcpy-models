@@ -1,12 +1,14 @@
+import unittest
+
 import numpy as np
-from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnector, Normal
+from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnector
 
 
 class MG1Queue(ProbabilisticModel, Continuous):
     """Simulates a M/G/1 queueing system with Uni[theta1, theta2] service times and Exp(theta3) interarrival times.
     It returns the interdeparture time for the first number_steps steps, assuming the queue starts empty."""
 
-    def __init__(self, parameters, number_steps=5, name='Iid_Beta'):
+    def __init__(self, parameters, number_steps=5, name='M/G/1'):
 
         self.number_steps = number_steps
         input_parameters = InputConnector.from_list(parameters)
@@ -53,3 +55,22 @@ class MG1Queue(ProbabilisticModel, Continuous):
 
     def _check_output(self, values):
         return True
+
+
+class MG1Tests(unittest.TestCase):
+    def setUp(self) -> None:
+        theta1 = 1
+        theta2 = 3
+        theta3 = 0.4
+        self.model = MG1Queue([theta1, theta2, theta3])
+        self.rng = np.random.RandomState(seed=42)
+
+    def test_check_input(self):
+        self.assertTrue(not self.model._check_input([1, 2, -1]))
+        self.assertTrue(not self.model._check_input([-1, 2, 1]))
+        self.assertTrue(not self.model._check_input([3, 2, 1]))
+        self.assertTrue(not self.model._check_input([1, 0, 1]))
+
+    def test_forward_sim(self):
+        out = self.model.forward_simulate([1, 3, 0.4], num_forward_simulations=2, rng=self.rng)
+        self.assertTrue(np.allclose(out[0], np.array([4.07459884, 2.58775259, 1.31198904, 2.73235229, 2.41614516])))
