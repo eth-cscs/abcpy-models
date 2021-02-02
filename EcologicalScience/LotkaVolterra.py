@@ -84,7 +84,7 @@ class LotkaVolterra(ProbabilisticModel, Continuous):
         return True
 
 
-class Multivariate_g_and_k_Tests(unittest.TestCase):
+class LotkaVolterraTests(unittest.TestCase):
     def setUp(self) -> None:
         self.alpha = np.exp(-0.125)
         self.beta = 1
