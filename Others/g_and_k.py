@@ -24,7 +24,7 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
     arXiv preprint arXiv:1706.06889 (2017), url https://arxiv.org/abs/1706.06889.
     """
 
-    def __init__(self, parameters, size=5, name='Iid_Beta'):
+    def __init__(self, parameters, size=5, name='Multivariate_g_and_k'):
 
         self.size = size
         self.c = 0.8  # fix this
