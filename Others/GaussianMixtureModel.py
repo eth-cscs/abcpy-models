@@ -16,13 +16,6 @@ class BivariateGaussianMixtureModel(ProbabilisticModel, Continuous):
         self.cov0 = np.array([[0.5, -0.3], [-0.3, 0.5]])
         self.cov1 = np.array([[0.25, 0], [0, 0.25]])
 
-    @staticmethod
-    def _create_mean_cov(mu1, mu2, sigma1, sigma2, rho):
-        mean = np.array([mu1, mu2])
-        off_diag_elem = rho * sigma1 * sigma2
-        cov = np.array([[sigma1 ** 2, off_diag_elem], [off_diag_elem, sigma2 ** 2]])
-        return mean, cov
-
     def forward_simulate(self, input_values, k, rng=np.random.RandomState()):
 
         p = input_values[0]
