@@ -7,7 +7,11 @@ from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnecto
 class BivariateGaussianMixtureModel(ProbabilisticModel, Continuous):
     """We implement here a bivariate gaussian mixture model in which the two components have fixed
      covariance matrices; this has parameters p (mixture ratio) and the means mu0 and mu1, which are the
-     2-dimensional means of the two components."""
+     2-dimensional means of the two components. We use the covariance matrices used in [1]
+
+    [1] Jiang, Bai. "Approximate Bayesian computation with Kullback-Leibler divergence as data discrepancy."
+    International Conference on Artificial Intelligence and Statistics. PMLR, 2018.
+    """
 
     def __init__(self, parameters, name='BivariateGaussianMixtureModel'):
         input_parameters = InputConnector.from_list(parameters)
