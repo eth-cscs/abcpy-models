@@ -31,6 +31,32 @@ class BivariateGaussianMixtureModel(ProbabilisticModel, Continuous):
         mu1 = np.array([mu1_0, mu1_1])
 
         # draw the bernoulli probabilities
+        # bernoulli = rng.binomial(n=1, p=p, size=k)
+        # the number of simulations from the 1st multivariate normal is a binomial(k,p), as for any of them you pick
+        # 1 w.p. p
+        num_simulations_1 = rng.binomial(n=k, p=p, size=1)[0]
+
+        result = np.zeros((k, 2))
+        # draw simulations from the two normals:
+        result[0:num_simulations_1] = rng.multivariate_normal(mu1, cov=self.cov1, size=num_simulations_1)
+        result[num_simulations_1:] = rng.multivariate_normal(mu0, cov=self.cov0, size=k - num_simulations_1)
+
+        # now shuffle the vector:
+        result = result[rng.choice(np.arange(k), size=k, replace=False)]
+
+        return [x for x in result]
+
+    def forward_simulate_old(self, input_values, k, rng=np.random.RandomState()):
+
+        p = input_values[0]
+        mu0_0 = input_values[1]
+        mu0_1 = input_values[2]
+        mu1_0 = input_values[3]
+        mu1_1 = input_values[4]
+        mu0 = np.array([mu0_0, mu0_1])
+        mu1 = np.array([mu1_0, mu1_1])
+
+        # draw the bernoulli probabilities
         bernoulli = rng.binomial(n=1, p=p, size=k)
 
         result = [None] * k
@@ -82,4 +108,4 @@ class BivariateGaussianMixtureModelTests(unittest.TestCase):
 
     def test_forward_sim(self):
         out = self.model.forward_simulate([self.p, self.mu0_0, self.mu0_1, self.mu1_0, self.mu1_1], k=2, rng=self.rng)
-        self.assertTrue(np.allclose(out[0], np.array([3.07199013, 1.29125853])))
+        self.assertTrue(np.allclose(out[0], np.array([11.74405994, -3.84054891])))
