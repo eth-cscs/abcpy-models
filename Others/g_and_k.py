@@ -1,7 +1,8 @@
-import unittest
-
 import numpy as np
+import unittest
 from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnector
+from scipy.optimize import fsolve
+from scipy.stats import multivariate_normal
 
 
 class Multivariate_g_and_k(ProbabilisticModel, Continuous):
@@ -38,22 +39,27 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
         k = input_values[3]
         rho = input_values[4]
 
-        result = self.draw_multiv_g_and_k(num_forward_simulations, self.size, A, B, g, k, rho, c=self.c, rng=rng)
+        result = self._draw_multiv_g_and_k(num_forward_simulations, self.size, A, B, g, k, rho, c=self.c, rng=rng)
 
         return [x for x in result]
 
-    def draw_multiv_g_and_k(self, n, dim, A, B, g, k, rho, c=0.8, rng=np.random.RandomState()):
+    def _create_cov_matrix(self, dim, rho):
+        return np.eye(dim) + rho * np.eye(dim, k=1) + rho * np.eye(dim, k=-1)
+
+    def _draw_multiv_g_and_k(self, n, dim, A, B, g, k, rho, c=0.8, rng=np.random.RandomState()):
         """n is the number of samples, dim is the dimensions"""
         # define the covariance matrix first:
-        cov = np.eye(dim) + rho * np.eye(dim, k=1) + rho * np.eye(dim, k=-1)
+
+        cov = self._create_cov_matrix(dim, rho)
 
         z = rng.multivariate_normal(mean=np.zeros(dim), cov=cov, size=n)
-        return self.z2gk(z, A, B, g, k, c=c)
+        return self._z2gk(z, A, B, g, k, c=c)
 
     @staticmethod
-    def z2gk(z, A, B, g, k, c=0.8):
+    def _z2gk(z, A, B, g, k, c=0.8):
         """Transform a sample from a standard normal (z) to a g-and-k draw. This assumes z, A, B, g, k and c are
-        scalars, while z can be an array."""
+        scalars, while z can be an array. This is basically the Q function (the inverse of cdf) in the standard
+        notation"""
 
         z = np.atleast_1d(z)
         z_squared = z ** 2
@@ -61,13 +67,45 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
             term1 = 1
         else:
             term1 = (1 + c * np.tanh(g * z * 0.5))
-        term2 = np.zeros_like(z)
+        term2 = np.zeros_like(z, dtype=float)
         zbig = np.isinf(z_squared)
         zsmall = np.logical_not(zbig)
         term2[zbig] = np.sign(z[zbig]) * np.abs(z[zbig]) ** (1 + 2 * k)
         term2[zsmall] = z[zsmall] * (1 + z_squared[zsmall]) ** k
 
         return A + B * term1 * term2
+
+    @staticmethod
+    def _Q_log_derivative(z, A, B, g, k, c=0.8):
+        """Compute the derivative of the Q function (the inverse cumulative function) evaluated at z."""
+
+        z = np.atleast_1d(z)
+        z_squared = z ** 2
+
+        # These are used to correct edge cases
+        # (likely to be rare so no need for particularly efficient code)
+        zbig = np.isinf(z_squared)
+        zsmall = np.logical_not(zbig)
+        term1 = np.zeros_like(z, dtype=float)
+        if k == 0:
+            term1 = 0
+        else:
+            term1[zsmall] = k * np.log(1 + z_squared[zsmall])
+            term1[zbig] = 2 * k * np.log(abs(z[zbig]))
+        if g == 0:
+            term2 = 1
+            term4 = 0
+        else:
+            gz = g * z
+            term2 = 1 + c * np.tanh(gz / 2)
+            term4 = c * gz / (2 * np.cosh(gz / 2) ** 2)
+
+        term3 = np.zeros_like(z, dtype=float)
+        term3[zsmall] = (1 + (2 * k + 1) * z_squared[zsmall]) / (1 + z_squared[zsmall])
+        term3[zbig] = 2 * k + 1
+        # term4[ is.infinite(z)] = 0
+
+        return np.log(B) + term1 + np.log(term2 * term3 + term4)
 
     def get_output_dimension(self):
         return self.size
@@ -94,6 +132,35 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
     def _check_output(self, values):
         return True
 
+    def logpdf(self, x, input_values):
+        A = input_values[0]
+        B = input_values[1]
+        g = input_values[2]
+        k = input_values[3]
+        rho = input_values[4]
+
+        # first: solve the equation x_j = Q(z_j; theta) for z_j, for all components of x; this requires solving
+        # numerically. Check how they do in g and k package.
+        z = np.zeros_like(x)
+        for j, x_j in enumerate(x):
+            func = lambda z: self._z2gk(z, A, B, g, k, self.c) - x_j
+
+            z[j] = fsolve(func, x0=np.array([0]), args=())
+
+        # could also do it with one single call -> faster. Not sure if that works however in the same way, as the
+        # scaling may be dependent on the dimension
+
+        # func = lambda z: self._z2gk(z, A, B, g, k, self.c) - x
+        # z = fsolve(func, x0=np.zeros_like(x), args=())
+        # print(np.allclose(z, z2))
+
+        # second: compute the log pdf by using the multivariate normal pdf and the derivative of the quantile function
+        # evaluated in z_j
+        cov = self._create_cov_matrix(self.size, rho)
+        logpdf_mvn = multivariate_normal.logpdf(z, mean=np.zeros(self.size), cov=cov)
+
+        return logpdf_mvn - np.sum(self._Q_log_derivative(z, A, B, g, k, self.c))
+
 
 class Multivariate_g_and_k_Tests(unittest.TestCase):
     def setUp(self) -> None:
@@ -115,3 +182,12 @@ class Multivariate_g_and_k_Tests(unittest.TestCase):
         out = self.model.forward_simulate([self.A, self.B, self.g, self.k, self.rho], num_forward_simulations=2,
                                           rng=self.rng)
         self.assertTrue(np.allclose(out[0], np.array([0.72921481, -8.97429356, 0.77753354, 2.90054443, -16.21483016])))
+
+    def test_logpdf(self):
+        out = self.model.forward_simulate([self.A, self.B, self.g, self.k, self.rho], num_forward_simulations=2,
+                                          rng=self.rng)
+        self.assertAlmostEqual(-17.42923883509208,
+                               self.model.logpdf(out[0], [self.A, self.B, self.g, self.k, self.rho]))
+
+    # I've also tested both the logpdf and the sampling routines against the 'gk' R library (in the 1d case only,
+    # as that does not implement higher dimensional cases))
