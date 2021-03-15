@@ -133,6 +133,11 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
         return True
 
     def logpdf(self, x, input_values):
+        """x here can be a single (multivariate) observation (1d array) or a set of observations (2d) array, with
+         second index denoting the components"""
+        if len(x.shape) not in (1, 2):
+            raise RuntimeError("Incorrect number of components for x")
+
         A = input_values[0]
         B = input_values[1]
         g = input_values[2]
@@ -141,11 +146,12 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
 
         # first: solve the equation x_j = Q(z_j; theta) for z_j, for all components of x; this requires solving
         # numerically. Check how they do in g and k package.
-        z = np.zeros_like(x)
-        for j, x_j in enumerate(x):
+        z = np.zeros_like(x.flatten())
+        for j, x_j in enumerate(x.flatten()):
             func = lambda z: self._z2gk(z, A, B, g, k, self.c) - x_j
 
             z[j] = fsolve(func, x0=np.array([0]), args=())
+        z = z.reshape(x.shape)
 
         # could also do it with one single call -> faster. Not sure if that works however in the same way, as the
         # scaling may be dependent on the dimension
@@ -159,7 +165,7 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
         cov = self._create_cov_matrix(self.size, rho)
         logpdf_mvn = multivariate_normal.logpdf(z, mean=np.zeros(self.size), cov=cov)
 
-        return logpdf_mvn - np.sum(self._Q_log_derivative(z, A, B, g, k, self.c))
+        return np.sum(logpdf_mvn) - np.sum(self._Q_log_derivative(z, A, B, g, k, self.c))
 
 
 class Multivariate_g_and_k_Tests(unittest.TestCase):
@@ -186,8 +192,13 @@ class Multivariate_g_and_k_Tests(unittest.TestCase):
     def test_logpdf(self):
         out = self.model.forward_simulate([self.A, self.B, self.g, self.k, self.rho], num_forward_simulations=2,
                                           rng=self.rng)
-        self.assertAlmostEqual(-17.42923883509208,
-                               self.model.logpdf(out[0], [self.A, self.B, self.g, self.k, self.rho]))
+        logpdf1 =self.model.logpdf(out[0], [self.A, self.B, self.g, self.k, self.rho])
+        self.assertAlmostEqual(-17.42923883509208, logpdf1,)
+
+        # check now that computing the logpdf with two observations at once works:
+        logpdf2 =self.model.logpdf(out[1], [self.A, self.B, self.g, self.k, self.rho])
+        logpdf_joint = self.model.logpdf(np.array(out), [self.A, self.B, self.g, self.k, self.rho])
+        self.assertAlmostEqual(logpdf_joint, logpdf1 + logpdf2)
 
     # I've also tested both the logpdf and the sampling routines against the 'gk' R library (in the 1d case only,
     # as that does not implement higher dimensional cases))
