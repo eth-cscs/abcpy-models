@@ -6,7 +6,11 @@ from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnecto
 
 class MG1Queue(ProbabilisticModel, Continuous):
     """Simulates a M/G/1 queueing system with Uni[theta1, theta2] service times and Exp(theta3) interarrival times.
-    It returns the interdeparture time for the first number_steps steps, assuming the queue starts empty."""
+    It returns the interdeparture time for the first number_steps steps, assuming the queue starts empty.
+
+    [1] Nelson, Barry. Foundations and methods of stochastic simulation: a first course. Springer Science & Business
+    Media, 2013.
+    """
 
     def __init__(self, parameters, number_steps=5, name='M/G/1'):
 
@@ -25,7 +29,7 @@ class MG1Queue(ProbabilisticModel, Continuous):
         return result
 
     def simulate_mg1(self, theta1, theta2, theta3, rng):
-        # use here Lindley equation.
+        # use here Lindley equation (notation follows chapter 4.3 of [1]) .
         Y = np.zeros(self.number_steps + 1)
         X = np.zeros(self.number_steps + 1)
         A = np.zeros(self.number_steps + 1)
