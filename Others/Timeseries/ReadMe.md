@@ -11,3 +11,11 @@ Notice that the exact likelihood of ARMA models can be computed in the case in w
 This implementation requires `statsmodels==0.9.0`; you can install it with: 
 
     pip install statsmodels==0.9.0
+
+
+In some works, the MA2 model is used with a uniform prior on a triangular region for [theta1, theta2]. We provide a reparametrized model
+which takes as inputs parameters [R1,R2] which, if they are given a Uniform[0,1] prior, result in theta1, theta2 being distributed uniformly on the correct 
+triangular region (see for instance in [1])
+
+[1] Marin, J. M., Pudlo, P., Robert, C. P., & Ryder, R. J. (2012). Approximate Bayesian computational methods. 
+Statistics and Computing, 22(6), 1167-1180.
