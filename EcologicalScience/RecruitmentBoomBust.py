@@ -41,18 +41,35 @@ class RecruitmentBoomBust(ProbabilisticModel, Continuous):
 
         r_plus_1 = 1 + r
 
-        for i in range(0, k):
-            # Initialize the time-series
-            timeseries = np.zeros(shape=self.n_timestep + self.burnin + 1, dtype=np.int)
-            timeseries[0] = kappa  # initial condition is k
-            epsilon_t = rng.poisson(beta, self.n_timestep + self.burnin)
-            for ind in range(1, self.n_timestep + self.burnin + 1):
-                if timeseries[ind - 1] <= kappa:
-                    timeseries[ind] = rng.poisson(timeseries[ind - 1] * r_plus_1) + epsilon_t[ind - 1]
-                else:
-                    timeseries[ind] = rng.binomial(timeseries[ind - 1], alpha) + epsilon_t[ind - 1]
+        # for i in range(0, k):
+        #     # Initialize the time-series
+        #     timeseries = np.zeros(shape=self.n_timestep + self.burnin + 1, dtype=np.int)
+        #     timeseries[0] = kappa  # initial condition is k
+        #     epsilon_t = rng.poisson(beta, self.n_timestep + self.burnin)
+        #     for ind in range(1, self.n_timestep + self.burnin + 1):
+        #         if timeseries[ind - 1] <= kappa:
+        #             timeseries[ind] = rng.poisson(timeseries[ind - 1] * r_plus_1) + epsilon_t[ind - 1]
+        #         else:
+        #             timeseries[ind] = rng.binomial(timeseries[ind - 1], alpha) + epsilon_t[ind - 1]
+        #
+        #     timeseries_array[i] = timeseries[self.burnin + 1:]
+        #
 
-            timeseries_array[i] = timeseries[self.burnin + 1:]
+        timeseries = np.zeros(shape=(self.n_timestep + self.burnin + 1, k), dtype=np.int)
+        timeseries[0] = kappa  # initial condition is k
+        epsilon_t = rng.poisson(beta, (self.n_timestep + self.burnin, k))
+        for ind in range(1, self.n_timestep + self.burnin + 1):
+            # find where the timeseries is <= kappa:
+            index_smaller_kappa = timeseries[ind - 1] <= kappa
+            index_larger_kappa = np.logical_not(index_smaller_kappa)
+            n_index_smaller_kappa = np.sum(index_smaller_kappa)
+            timeseries[ind, index_smaller_kappa] = \
+                rng.poisson(timeseries[ind - 1, index_smaller_kappa] * r_plus_1, size=n_index_smaller_kappa) + epsilon_t[ind - 1, index_smaller_kappa]
+            timeseries[ind, index_larger_kappa] = \
+                rng.binomial(timeseries[ind - 1, index_larger_kappa], alpha, size=k-n_index_smaller_kappa) + epsilon_t[ind - 1, index_larger_kappa]
+
+        for i in range(0,k):
+            timeseries_array[i] = timeseries[self.burnin + 1:, i]
 
         return timeseries_array
 
@@ -135,9 +152,13 @@ class RecruitmentBoomBustTests(unittest.TestCase):
         self.statistics = RecruitmentBoomBustStatistics()
 
     def test_forward_sim(self):
-        out = self.model.forward_simulate([self.r, self.kappa, self.alpha, self.beta], k=2, rng=self.rng)
+        out = self.model.forward_simulate([self.r, self.kappa, self.alpha, self.beta], k=1, rng=self.rng)
         self.assertEqual(out[0].shape[0], self.model.get_output_dimension())
         self.assertEqual(np.sum(out[0]), 3239)  # a fixed value
+
+        out = self.model.forward_simulate([self.r, self.kappa, self.alpha, self.beta], k=2, rng=self.rng)
+        self.assertEqual(out[0].shape[0], self.model.get_output_dimension())
+        self.assertEqual(np.sum(out[0]), 4541)  # a fixed value
 
     def test_wrong_params(self):
         self.assertFalse(self.model._check_input([-self.r, self.kappa, self.alpha, self.beta]))
