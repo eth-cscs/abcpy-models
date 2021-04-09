@@ -5,16 +5,16 @@ import unittest
 
 class Ricker(ProbabilisticModel, Continuous):
     """Ecological model that describes the observed size of animal population over time
-        described in [1].
+    described in [1].
 
-        [1] S. N. Wood. Statistical inference for noisy nonlinear ecological
-        dynamic systems. Nature, 466(7310):1102–1104, Aug. 2010.
+    [1] S. N. Wood. Statistical inference for noisy nonlinear ecological
+    dynamic systems. Nature, 466(7310):1102–1104, Aug. 2010.
 
-        Parameters
-        ----------
-        parameters: list
-            Contains the probabilistic models and hyperparameters from which the model derives.
-        n_timestep: int, optional
+    Parameters
+    ----------
+    parameters: list
+        Contains the probabilistic models and hyperparameters from which the model derives.
+    n_timestep: int, optional
         Number of timesteps. The default value is 100.
     """
 

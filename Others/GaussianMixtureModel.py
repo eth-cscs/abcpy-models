@@ -7,7 +7,11 @@ from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnecto
 class BivariateGaussianMixtureModel(ProbabilisticModel, Continuous):
     """We implement here a bivariate gaussian mixture model in which the two components have fixed
      covariance matrices; this has parameters p (mixture ratio) and the means mu0 and mu1, which are the
-     2-dimensional means of the two components."""
+     2-dimensional means of the two components. We use the covariance matrices used in [1]
+
+    [1] Jiang, Bai. "Approximate Bayesian computation with Kullback-Leibler divergence as data discrepancy."
+    International Conference on Artificial Intelligence and Statistics. PMLR, 2018.
+    """
 
     def __init__(self, parameters, name='BivariateGaussianMixtureModel'):
         input_parameters = InputConnector.from_list(parameters)
@@ -16,14 +20,33 @@ class BivariateGaussianMixtureModel(ProbabilisticModel, Continuous):
         self.cov0 = np.array([[0.5, -0.3], [-0.3, 0.5]])
         self.cov1 = np.array([[0.25, 0], [0, 0.25]])
 
-    @staticmethod
-    def _create_mean_cov(mu1, mu2, sigma1, sigma2, rho):
-        mean = np.array([mu1, mu2])
-        off_diag_elem = rho * sigma1 * sigma2
-        cov = np.array([[sigma1 ** 2, off_diag_elem], [off_diag_elem, sigma2 ** 2]])
-        return mean, cov
-
     def forward_simulate(self, input_values, k, rng=np.random.RandomState()):
+
+        p = input_values[0]
+        mu0_0 = input_values[1]
+        mu0_1 = input_values[2]
+        mu1_0 = input_values[3]
+        mu1_1 = input_values[4]
+        mu0 = np.array([mu0_0, mu0_1])
+        mu1 = np.array([mu1_0, mu1_1])
+
+        # draw the bernoulli probabilities
+        # bernoulli = rng.binomial(n=1, p=p, size=k)
+        # the number of simulations from the 1st multivariate normal is a binomial(k,p), as for any of them you pick
+        # 1 w.p. p
+        num_simulations_1 = rng.binomial(n=k, p=p, size=1)[0]
+
+        result = np.zeros((k, 2))
+        # draw simulations from the two normals:
+        result[0:num_simulations_1] = rng.multivariate_normal(mu1, cov=self.cov1, size=num_simulations_1)
+        result[num_simulations_1:] = rng.multivariate_normal(mu0, cov=self.cov0, size=k - num_simulations_1)
+
+        # now shuffle the vector:
+        result = result[rng.choice(np.arange(k), size=k, replace=False)]
+
+        return [x for x in result]
+
+    def forward_simulate_old(self, input_values, k, rng=np.random.RandomState()):
 
         p = input_values[0]
         mu0_0 = input_values[1]
@@ -85,4 +108,4 @@ class BivariateGaussianMixtureModelTests(unittest.TestCase):
 
     def test_forward_sim(self):
         out = self.model.forward_simulate([self.p, self.mu0_0, self.mu0_1, self.mu1_0, self.mu1_1], k=2, rng=self.rng)
-        self.assertTrue(np.allclose(out[0], np.array([3.07199013, 1.29125853])))
+        self.assertTrue(np.allclose(out[0], np.array([11.74405994, -3.84054891])))

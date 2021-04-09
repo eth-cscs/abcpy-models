@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 from abcpy.continuousmodels import ProbabilisticModel, Continuous, InputConnector
 from scipy import integrate
+from scipy.stats import lognorm
 
 
 class LotkaVolterra(ProbabilisticModel, Continuous):
@@ -14,6 +15,12 @@ class LotkaVolterra(ProbabilisticModel, Continuous):
 
     If noise==True, we add some log-normal noise over the different observations (with fixed parameters), in order to
     make the model stochastic.
+
+    The noise and initial conditions are the ones used in [1]
+
+    [1] Lueckmann, Jan-Matthis, et al. "Benchmarking Simulation-Based Inference."
+    arXiv preprint arXiv:2101.04653 (2021), url https://arxiv.org/abs/2101.04653.
+
     """
 
     def __init__(self, parameters, T=20, n_integration_steps=1000, noise=True, name='LotkaVolterra'):
@@ -32,12 +39,7 @@ class LotkaVolterra(ProbabilisticModel, Continuous):
         gamma = input_values[2]
         delta = input_values[3]
 
-        # integrate the ODE
-        dX_dt = self.define_dX_dt(alpha, beta, gamma, delta)  # define the increment to integrate
-        X = self.integrate_ODE(dX_dt)
-
-        # take 10 evenly spaced points in time:
-        X = X[self.n_integration_steps // 10 - 1::self.n_integration_steps // 10]
+        X = self.integrate_LV_ODE(alpha, beta, gamma, delta)
 
         # now duplicate the above for the required num_forward_simulations
         X = np.stack([X] * num_forward_simulations)
@@ -51,6 +53,21 @@ class LotkaVolterra(ProbabilisticModel, Continuous):
 
         return [x for x in X]
 
+    def logpdf(self, x, input_values, ):
+        """x here can be a single (multivariate) observation (1d array) or a set of observations (2d) array, with
+         second index denoting the components"""
+        alpha = input_values[0]
+        beta = input_values[1]
+        gamma = input_values[2]
+        delta = input_values[3]
+
+        X = self.integrate_LV_ODE(alpha, beta, gamma, delta)
+        X[X <= 0] = 1e-20  # for numerical stability
+
+        logpdf = lognorm(scale=X, s=self.sigma_lognormal).logpdf(x)
+
+        return np.sum(logpdf)
+
     @staticmethod
     def define_dX_dt(alpha, beta, gamma, delta, ):
         def dX_dt(X, t=0):
@@ -59,6 +76,16 @@ class LotkaVolterra(ProbabilisticModel, Continuous):
                              -gamma * X[1] + delta * X[0] * X[1]])
 
         return dX_dt
+
+    def integrate_LV_ODE(self, alpha, beta, gamma, delta):
+        # integrate the ODE
+        dX_dt = self.define_dX_dt(alpha, beta, gamma, delta)  # define the increment to integrate
+        X = self.integrate_ODE(dX_dt)
+
+        # take 10 evenly spaced points in time:
+        X = X[self.n_integration_steps // 10 - 1::self.n_integration_steps // 10]
+
+        return X
 
     def integrate_ODE(self, dX_dt):
         t = np.linspace(0, self.T, self.n_integration_steps)  # time
@@ -117,3 +144,14 @@ class LotkaVolterraTests(unittest.TestCase):
         self.assertTrue(np.allclose(out[0], out[1]))  # these should now be equal
         self.assertAlmostEqual(np.mean(out[0]), 0.817750307792599)
         self.assertAlmostEqual(np.std(out[0]), 2.1015960549106514)
+
+    def test_logpdf(self):
+        out = self.model.forward_simulate([self.alpha, self.beta, self.gamma, self.delta], num_forward_simulations=2,
+                                          rng=self.rng)
+        logpdf1 = self.model.logpdf(out[0], [self.alpha, self.beta, self.gamma, self.delta])
+        self.assertAlmostEqual(278.5546363335179, logpdf1, )
+
+        # check now that computing the logpdf with two observations at once works:
+        logpdf2 = self.model.logpdf(out[1], [self.alpha, self.beta, self.gamma, self.delta])
+        logpdf_joint = self.model.logpdf(np.array(out), [self.alpha, self.beta, self.gamma, self.delta])
+        self.assertAlmostEqual(logpdf_joint, logpdf1 + logpdf2)
