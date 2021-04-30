@@ -168,6 +168,19 @@ class Multivariate_g_and_k(ProbabilisticModel, Continuous):
         return np.sum(logpdf_mvn) - np.sum(self._Q_log_derivative(z, A, B, g, k, self.c))
 
 
+class Univariate_g_and_k(Multivariate_g_and_k):
+    """Alias the multivariate one for the univariate case """
+
+    def __init__(self, parameters, name='Univariate_g_and_k'):
+        rho = 0  # unused
+        super(Univariate_g_and_k, self).__init__(parameters + [rho], size=1, name=name)
+
+    def forward_simulate(self, input_values, num_forward_simulations, rng=np.random.RandomState()):
+        rho = 0  # this value is needed only for the parent method but unused with size=1
+        return super(Univariate_g_and_k, self).forward_simulate(input_values + [rho], num_forward_simulations,
+                                                                rng=rng)
+
+
 class Multivariate_g_and_k_Tests(unittest.TestCase):
     def setUp(self) -> None:
         self.A = 1
@@ -192,11 +205,11 @@ class Multivariate_g_and_k_Tests(unittest.TestCase):
     def test_logpdf(self):
         out = self.model.forward_simulate([self.A, self.B, self.g, self.k, self.rho], num_forward_simulations=2,
                                           rng=self.rng)
-        logpdf1 =self.model.logpdf(out[0], [self.A, self.B, self.g, self.k, self.rho])
-        self.assertAlmostEqual(-17.42923883509208, logpdf1,)
+        logpdf1 = self.model.logpdf(out[0], [self.A, self.B, self.g, self.k, self.rho])
+        self.assertAlmostEqual(-17.42923883509208, logpdf1, )
 
         # check now that computing the logpdf with two observations at once works:
-        logpdf2 =self.model.logpdf(out[1], [self.A, self.B, self.g, self.k, self.rho])
+        logpdf2 = self.model.logpdf(out[1], [self.A, self.B, self.g, self.k, self.rho])
         logpdf_joint = self.model.logpdf(np.array(out), [self.A, self.B, self.g, self.k, self.rho])
         self.assertAlmostEqual(logpdf_joint, logpdf1 + logpdf2)
 
