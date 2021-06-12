@@ -13,4 +13,4 @@ This repository contains a number of different models implemented in ABCpy, broa
 * [QueueingSystems](https://github.com/eth-cscs/abcpy-models/tree/master/QueueingSystems) This folder contains the M/G/1 queueing model which is used frequently for benchmarking ABC algorithms (see README in that folder for more information)
 * Other: Some other models (e.g., multivariate g-and-k model, timeseries and iid models for which the likelihood is known)
 
-These official models are a collection of example models that use ABCpy's high-level APIs. They are intended to be well-maintained, tested, and kept up to date with the latest stable ABCpy API. We especially recommend newer ABCpy users to start [here](http://abcpy.readthedocs.io/en/latest/README.html#getting-started).
+These official models are a collection of example models that use ABCpy's high-level APIs. They are intended to be well-maintained, tested, and kept up to date with the latest stable ABCpy API. We especially recommend newer ABCpy users to start [here](https://abcpy.readthedocs.io/en/latest/getting_started.html).
