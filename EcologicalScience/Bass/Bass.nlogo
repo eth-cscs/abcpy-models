@@ -467,9 +467,9 @@ set ABC_N29 []
 
 
 
-;data
+;C:/Users/josep/Dropbox/From andrews PC/data
 
-;C:/Users/dm820646/Dropbox/From andrews PC
+;C:/Users/josep/Dropbox/From andrews PC
 
 
   gis:load-coordinate-system ("data/esriwkt.txt")
@@ -814,11 +814,12 @@ ask patches with [sst >= 0]
   set GL 0.02485 ;young lifwe stage mort
 
 
-  set H  8.17E-01 ;0.5
-  set Am 5.61E-04 ; 6.60E-04
-  set AE 2.18E-03; 0.01
-  set PM 6.15E-02 ;0.16686103 ;0.03686103 ;; 0.03712
-  set I  6.70E+13; 5E+13
+  set H 0.44550152307906293
+  set Am 0.0004913421837608376
+  set AE 0.001567700430167607;
+  set PM  0.08415614114547765
+  set I  5.199921487360376E+13
+
 
 
   setup_turtles
@@ -847,6 +848,7 @@ end
 to setup_turtles ;so should we be using 1985 stuff here?
 
   file-open "data/2020/icesagedistribution.txt"
+    ;file-open "data/icesagedistribution.txt"
 
   while [not file-at-end?]
   [
@@ -1539,8 +1541,15 @@ ifelse assimilation-energy > MR                                                 
 
  [                                                                                       ; if not,
   set energy-reserve energy-reserve + assimilation-energy                          ; add the assimilated energy to the reserves
-   set energy-reserve energy-reserve - MR                                                 ; then subtract the costs of maintenance
-    set assimilation-energy  0                                                            ; and set assimilation-energy 0 ; chnaged to get rid as reserves will still be there?
+
+ set assimilation-energy  0
+
+ifelse energy-reserve > MR
+[set energy-reserve energy-reserve - MR]
+[set energy-reserve  0]
+
+
+
   ]
                                                                                           ; the individual will die (in the procedure "calc-starvation") if this results in empty energy reserves
 end
@@ -3459,7 +3468,7 @@ end
 
 
 to recreational-inshore-F
-    ;file-open "C:/Users/dm820646/Dropbox/abc_shared/IBM/data/RecreationalinshoreF.txt"
+    ;file-open "data/RecreationalinshoreF.txt"
      file-open "data/2020/RecreationalinshoreF.txt"
     while [not file-at-end?]
     [ let fyear file-read
@@ -3480,7 +3489,7 @@ end
 
 
 to commercial-inshore-F
-;  file-open "C:/Users/dm820646/Dropbox/abc_shared/IBM/data/CommercialinshoreF.txt"
+;  file-open "data/CommercialinshoreF.txt"
        file-open "data/2020/CommercialinshoreF.txt"
     while [not file-at-end?]
     [ let fyear file-read
@@ -3499,7 +3508,7 @@ end
 
 
 to commercial-offshore-F
-;file-open "C:/Users/dm820646/Dropbox/abc_shared/IBM/data/CommercialoffshoreF.txt"
+;file-open "data/CommercialoffshoreF.txt"
      file-open "data/2020/CommercialoffshoreF.txt"
     while [not file-at-end?]
     [ let fyear file-read
