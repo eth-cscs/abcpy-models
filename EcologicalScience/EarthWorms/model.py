@@ -662,8 +662,8 @@ class EarthWormJohnston2014ConstantCondition(ProbabilisticModel, Continuous):
         netlogo.kill_workspace()
         return result
 
-parameters = [967, 0.25, 7, 10.6, 3.6, 3.5, 0.15, 0.011, 0.015, 0.5, 0.25, 0.177, 0.182, 0.0004]
-
+# parameters = [967, 0.25, 7, 10.6, 3.6, 3.5, 0.15, 0.011, 0.015, 0.5, 0.25, 0.177, 0.182, 0.0004]
+#
 # ## 1dimensional timeseries with 27 time points
 # model = EarthWormGunadi2002(parameters)
 # y_simulate = model.forward_simulate(parameters,1)
@@ -680,6 +680,6 @@ parameters = [967, 0.25, 7, 10.6, 3.6, 3.5, 0.15, 0.011, 0.015, 0.5, 0.25, 0.177
 # print(y_simulate)
 
 ## 2 dimensional timeseries with 17 time points and 19 time points for the first and second dimension
-model = EarthWormJohnston2014ConstantCondition(parameters)
-y_simulate = model.forward_simulate(parameters,1)
-print(y_simulate)
+# model = EarthWormJohnston2014ConstantCondition(parameters)
+# y_simulate = model.forward_simulate(parameters,1)
+# print(y_simulate)
