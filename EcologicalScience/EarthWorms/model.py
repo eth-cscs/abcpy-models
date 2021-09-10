@@ -4,7 +4,7 @@ from abcpy.probabilisticmodels import ProbabilisticModel, Continuous, InputConne
 
 from scipy.stats import lognorm
 
-netlogo_home = "/path/to/netlogo"
+netlogo_home = '/home/rito/netlogo-5.3.1-64'
 
 
 class LogNormal(ProbabilisticModel, Continuous):
@@ -501,15 +501,20 @@ class EarthWormJohnston2014VariableCondition(ProbabilisticModel, Continuous):
         ## Simulate and save results
         result = []
         for ind in range(k):
-            result_tmp = np.zeros(shape=(16, 2))
+            result_tmp_mean_mass = np.zeros(shape=(17, 1))
+            result_tmp_cocoon = np.zeros(shape=(19, 1))
             netlogo.command("setup")
             netlogo.command("go-25")
-            result_tmp[0,0] = netlogo.report("sum-hatchlings")
-            result_tmp[0,1] = netlogo.report("mean-mass")
-            for t in range(1, 16):
+            result_tmp_cocoon[0] = netlogo.report("sum-hatchlings")
+            result_tmp_mean_mass[0] = netlogo.report("mean-mass")
+            for t in range(16):
                 netlogo.command("go-10")
-                result_tmp[t,0] = netlogo.report("sum-hatchlings")
-                result_tmp[t, 1] = netlogo.report("mean-mass")
+                result_tmp_cocoon[t] = netlogo.report("sum-hatchlings")
+                result_tmp_mean_mass[t] = netlogo.report("mean-mass")
+            for t in range(17,19):
+                netlogo.command("go-10")
+                result_tmp_cocoon[t] = netlogo.report("sum-hatchlings")
+            result_tmp = np.concatenate((result_tmp_mean_mass, result_tmp_cocoon))
             result.append(result_tmp.flatten())
         netlogo.kill_workspace()
         return result
@@ -639,15 +644,20 @@ class EarthWormJohnston2014ConstantCondition(ProbabilisticModel, Continuous):
         ## Simulate and save results
         result = []
         for ind in range(k):
-            result_tmp = np.zeros(shape=(16, 2))
+            result_tmp_mean_mass = np.zeros(shape=(17, 1))
+            result_tmp_cocoon = np.zeros(shape=(19, 1))
             netlogo.command("setup")
             netlogo.command("go-25")
-            result_tmp[0,0] = netlogo.report("sum-hatchlings")
-            result_tmp[0,1] = netlogo.report("mean-mass")
-            for t in range(1, 16):
+            result_tmp_cocoon[0] = netlogo.report("sum-hatchlings")
+            result_tmp_mean_mass[0] = netlogo.report("mean-mass")
+            for t in range(16):
                 netlogo.command("go-10")
-                result_tmp[t, 0] = netlogo.report("sum-hatchlings")
-                result_tmp[t, 1] = netlogo.report("mean-mass")
+                result_tmp_cocoon[t] = netlogo.report("sum-hatchlings")
+                result_tmp_mean_mass[t] = netlogo.report("mean-mass")
+            for t in range(17,19):
+                netlogo.command("go-10")
+                result_tmp_cocoon[t] = netlogo.report("sum-hatchlings")
+            result_tmp = np.concatenate((result_tmp_mean_mass, result_tmp_cocoon))
             result.append(result_tmp.flatten())
         netlogo.kill_workspace()
         return result
@@ -664,12 +674,12 @@ parameters = [967, 0.25, 7, 10.6, 3.6, 3.5, 0.15, 0.011, 0.015, 0.5, 0.25, 0.177
 # y_simulate = model.forward_simulate(parameters,1)
 # print(y_simulate)
 #
-# ## 2dimensional timeseries with 16 time points
+## 2 dimensional timeseries with 17 time points and 19 time points for the first and second dimension
 # model = EarthWormJohnston2014VariableCondition(parameters)
 # y_simulate = model.forward_simulate(parameters,1)
 # print(y_simulate)
-#
-# ## 2dimensional timeseries with 16 time points
-# model = EarthWormJohnston2014ConstantCondition(parameters)
-# y_simulate = model.forward_simulate(parameters,1)
-# print(y_simulate)
+
+## 2 dimensional timeseries with 17 time points and 19 time points for the first and second dimension
+model = EarthWormJohnston2014ConstantCondition(parameters)
+y_simulate = model.forward_simulate(parameters,1)
+print(y_simulate)
