@@ -169,11 +169,10 @@ class EarthWormGunadi2002(ProbabilisticModel, Continuous):
         return True
 
     def get_output_dimension(self):
-        ### TODO: Correct dimension
-        return 1
+        return 27
 
     def get_number_parameters(self):
-        return 13
+        return 14
 
     def forward_simulate(self, input_values, k, rng=np.random.RandomState()):
         # Extract the input parameters
@@ -304,8 +303,7 @@ class EarthWormGunadiEdwards2003(ProbabilisticModel, Continuous):
         return True
 
     def get_output_dimension(self):
-        ### TODO: Correct dimension
-        return 1
+        return 122
 
     def get_number_parameters(self):
         return 14
