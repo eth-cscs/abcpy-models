@@ -147,7 +147,7 @@ class StochLorenz95(ProbabilisticModel, Continuous):
             # Define a parameter object containing parameters which is needed
             # to evaluate the ODEs
             # Stochastic forcing term
-            eta = sigma_e * np.sqrt(1 - pow(phi, 2)) * rng.normal(0, 1, self.initial_state.shape[0])
+            eta = sigma_e * np.sqrt(1 - pow(phi, 2)) * rng.normal(0, 1, self.K)
 
             # Initialize the time-series
             timeseries = np.zeros(shape=(self.K, self.n_timestep), dtype=np.float)
@@ -257,7 +257,7 @@ class StochLorenz95(ProbabilisticModel, Continuous):
         # ------------------------------------
         dx[0] = -x[-2] * x[-1] + x[-1] * x[1] - x[0] + self.F - gu[0] + eta[0]
         dx[1] = -x[-1] * x[0] + x[0] * x[2] - x[1] + self.F - gu[1] + eta[1]
-        for ind in range(2, x.shape[0] - 2):
+        for ind in range(2, x.shape[0] - 1):
             dx[ind] = -x[ind - 2] * x[ind - 1] + x[ind - 1] * x[ind + 1] - x[ind] + self.F - gu[ind] + eta[ind]
         dx[-1] = -x[-3] * x[-2] + x[-2] * x[1] - x[-1] + self.F - gu[-1] + eta[-1]
 
@@ -289,7 +289,7 @@ class StochLorenz95(ProbabilisticModel, Continuous):
 
         dx[0] = -x[-2] * x[-1] + x[-1] * x[1] - x[0] + self.F - self.hc_over_b * np.sum(y[0: self.J])
         dx[1] = -x[-1] * x[0] + x[0] * x[2] - x[1] + self.F - self.hc_over_b * np.sum(y[self.J: 2 * self.J])
-        for ind in range(2, x.shape[0] - 2):
+        for ind in range(2, x.shape[0] - 1):
             dx[ind] = -x[ind - 2] * x[ind - 1] + x[ind - 1] * x[ind + 1] - x[ind] + self.F - \
                       self.hc_over_b * np.sum(y[self.J * ind: self.J * (ind + 1)])
         dx[-1] = -x[-3] * x[-2] + x[-2] * x[1] - x[-1] + self.F - self.hc_over_b * np.sum(y[-1 * self.J:])
@@ -319,7 +319,7 @@ class StochLorenz95(ProbabilisticModel, Continuous):
 
         # ODE definition of the fast variables
         # ------------------------------------
-        for ind in range(y.shape[0] - 3):
+        for ind in range(y.shape[0] - 2):
             dy[ind] = - self.cb * y[ind + 1] * (y[ind + 2] - y[ind - 1]) - self.c * y[ind] + \
                       self.hc_over_b * x[ind // self.J]  # // for the integer division.
 
