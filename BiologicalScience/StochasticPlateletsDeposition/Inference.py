@@ -1,134 +1,257 @@
-import logging
-logging.basicConfig(level=logging.INFO)
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 import numpy as np
 from abcpy.continuousmodels import Uniform
 from abcpy.output import Journal
 from Model import PlateletDeposition
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.cluster import adjusted_rand_score
-# ###############################################
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument("whichobsinfer", help="which observation", type=int)
-args = parser.parse_args()
-whichobsinfer = args.whichobsinfer
+from abcpy.statisticslearning import TripletDistanceLearning, SemiautomaticNN
+from statistic import IdentityChosen
+from abcpy.statistics import NeuralEmbedding
+from posterior_mode import compute_posterior_mode
+import pylab as plt
+###############################################
 # ########### Read Observed data ################
 from numpy import genfromtxt
-from metric_learn import LMNN
-my_data = genfromtxt('DataCleanedObserved.csv', delimiter=',')
-# The missing column has been imputed and actiavted platelets values computed using the formula
-ShR = my_data[2:, 0]
-X = my_data[2:,2:]
-
-# ############ Learn distance from the dataset#####
-# # Consider 3 classes as volunteer (16 of them), Patient Dialysé (non Diabètiqu + Diabètiqu) (16 of them) and  Patient BPCO (stable + Exacerbé) (8 of them)
-# n_clus = 3
-A, B, C = X[:16, :], X[16:32, :], X[32:, :]
-X = np.vstack((A, B, C))
-AI, BI, CI = np.ones(shape=(16,1)), np.ones(shape=(16,1)), np.ones(shape=(8,1))
-Y = np.vstack((AI, 2*BI, 3*CI)).reshape(-1,)
-
-XObserved = np.zeros(shape=(40,25))
-for whichobs in range(40):
-    XObserved[whichobs,:] = [np.hstack((np.array([0,20,60,120,300]).reshape(5,1),X[whichobs,:].reshape(4,5).transpose())).flatten().reshape(1,-1)][0]
-# Define the indices used as features to remove timestamp etc. and values with NA
-indices_chosen = [3, 4, 6, 7, 8, 16, 17, 21, 22, 23]
-XChosen = XObserved[:,indices_chosen]
-
-# Learn the embedding
-# lmnn = LMNN(init='lda',k=6, min_iter=10000, max_iter=50000, convergence_tol=1e-6, learn_rate=1e-10, regularization=.5, n_components = 2)
-# lmnn.fit(XChosen, Y)
-# L = lmnn.components_
-
-L = np.array([[ 2.61836732e-05, 1.24366184e-04, 1.65418571e-04, -2.76891651e-01, -3.16512105e-05, 1.31921975e-04, 1.17853188e-02, 1.07568061e-03, -1.48116765e-02, -1.39082174e-05],
- [-5.95664564e-06, 1.97248981e-05, -1.17200781e-04, -2.66547093e-01, 6.23778123e-06, -1.93221396e-03, -4.88895269e-02, 1.80570575e-03, 8.92376774e-02, -3.33985710e-06]])
-# Report classification capabiliy of embedding
-#X_lmnn = lmnn.transform(XChosen)
-
-# import pylab as plt
-# plt.figure()
-# plt.plot(X_lmnn[:16,0], X_lmnn[:16,1], 'k*', label='Healthy Volunteers')
-# plt.plot(X_lmnn[16:32,0], X_lmnn[16:32,1], 'r*', label='Patients having dialysis')
-# plt.plot(X_lmnn[32:,0], X_lmnn[32:,1], 'b*', label ='COPD patients')
-# plt.xlabel(r'$X_1$',fontsize=20)
-# plt.ylabel(r'$X_2$',fontsize=20)
-# plt.title('2-dim projected space', fontsize=20)
-# plt.legend(fontsize=10)
-# plt.savefig('Projected.eps')
-
-# # cluster_lmnn = AgglomerativeClustering(n_clusters=n_clus, affinity='euclidean', linkage='ward')
-# # cluster_lmnn.fit_predict(X_lmnn)
-# # print('AR score of Euclidean distance btwn LMNN: '+str(adjusted_rand_score(Y, cluster_lmnn.labels_)))
-#
-# ########## Define distance based on embedding learned #####
-# # Start from identity statistics
-# from abcpy.statistics import Identity
-# statistics_calculator = Identity(degree = 1, cross = False)
-# # Redefine the statistics function
-# statistics_calculator.statistics = lambda x, f1=statistics_calculator.statistics: (f1(x)[:,indices_chosen]).dot(L.T)
-#
-# # Define Euclidean distance on the embedding
-# from abcpy.distances import Euclidean
-# dist_calc = Euclidean(statistics_calculator)
-# # ###############################################
+my_data = genfromtxt('Data/AllResults.csv', delimiter=',')
+fake = False
+train_classifier = False
+simulate_pilot = False
+train_save_NN = False
+sample = False
+plot = True
+predict = False
+###############################################
 # Define backend
-from abcpy.backends import BackendDummy as Backend
-backend = Backend()
-# ########### Define Graphical Model ############
-# Define which experimental study
-#whichobs = 0
-print(whichobsinfer)
-obsdata = [np.array(XObserved[whichobsinfer,:]).reshape(1,-1)]
-## Fixed values
-# Initial values of AP and NAP
-noAP = XObserved[whichobsinfer,4].astype(int)
-noNAP = XObserved[whichobsinfer,3].astype(int)
-# Fixed value of sheer rate used fror the experiment
-SR_x = float(ShR[whichobsinfer]) #100
-## Random values
-# The parameters considered random and we want to infer
-pAd = Uniform([[5], [150]], name='pAD')
-pAg = Uniform([[5], [150]], name='pAg')
-pT = Uniform([[0.1], [10.0]], name='pT')
-pF = Uniform([[0.1e-3], [9.0e-3]], name='pF')
-aT = Uniform([[0], [10]], name='aT')
-v_z_AP =  Uniform([[1.0e-3], [9.0e-3]], name='v_z_AP')
-v_z_NAP =  Uniform([[1.0e-4], [9.0e-4]], name='v_z_NAP')
+from abcpy.backends import BackendMPI, BackendDummy
+backend = BackendDummy()
+#backend = BackendMPI()
+print('Hello')
+renewed = list(range(6)) + list(range(23,65))
+if train_classifier:
+    alldata, label, infoindi = [], [], []
+    for whichobs in renewed:
+        XObserved = [np.hstack((np.array([0, 20, 60, 120, 300]).reshape(5, 1),
+                                my_data[:, 1:21][whichobs, :].reshape(4, 5).transpose())).flatten().reshape(1, -1)][0]
+        alldata.append(XObserved[0])
+        obsdata = [np.array(XObserved).reshape(1, -1)]
+        # Define the indices used as features to remove timestamp etc. and values with NA
+        AllIndices = list(np.arange(0, 25, 1))
+        NANTimeIndices = list(np.argwhere(np.isnan(XObserved[0, :])).reshape(-1, )) + [0, 5, 10, 15, 20] + list(np.arange(0, 5, 1)) + [4, 9, 14, 19, 24]
+        InformativeIndices = [item for item in AllIndices if item not in NANTimeIndices]
+        infoindi.append(InformativeIndices)
+        noAP, noNAP, SR_x = int(my_data[whichobs, 16]), int(my_data[whichobs, 11]), float(my_data[whichobs, 21])
+        label.append(my_data[whichobs, 23])
+    result = set(infoindi[0]).intersection(*infoindi[1:])
+    print(result)
+    alldata_cleaned = np.array(alldata)[:,list(result)]
+    from abcpy.statistics import Identity
+    stat = Identity(degree=3, cross=True)
+    XChosen = stat.statistics([[alldata_cleaned[i,:]] for i in range(alldata_cleaned.shape[0])])
+    print(XChosen.shape)
+    from metric_learn import LMNN
+    metric = LMNN(init='auto',k=6, min_iter=10000, max_iter=50000, convergence_tol=1e-6, learn_rate=1e-10, regularization=.5, n_components = 2)
+    metric.fit(XChosen, label)
+    L = metric.components_
+    np.savez('Data/L_all_3_cross.npz', L=L)
 
-PD = PlateletDeposition([noAP, noNAP, SR_x, pAd, pAg, pT, pF, aT, v_z_AP, v_z_NAP], name = 'PD')
+    L = np.load('Data/L_all_3_cross.npz')['L']
+    X_lmnn = XChosen.dot(L.T)
+    print(X_lmnn.shape)
+    import pylab as plt
+    plt.figure()
+    plt.plot(X_lmnn[:16,0], X_lmnn[:16,1], 'k*', label='Patients with COPD')
+    plt.plot(X_lmnn[16:32,0], X_lmnn[16:32,1], 'r*', label='Patients having dialysis')
+    plt.plot(X_lmnn[32:,0], X_lmnn[32:,1], 'b*', label ='Healthy volunteers')
+    plt.xlabel(r'$X_1$',fontsize=20)
+    plt.ylabel(r'$X_2$',fontsize=20)
+    #plt.title('2-dim projected space', fontsize=20)
+    plt.legend(fontsize=10)
+    plt.savefig('FinalFigures/Fig6.pdf')
 
-filenamere = '../APMCABC_Results/apmcabc_obs_'+str(whichobsinfer)+'_reweighted.jrnl'
-journal = Journal.fromFile(filenamere)
-parameters_to_show = ['pAD', 'pAg', 'pT', 'pF', 'aT', 'v_z_AP', 'v_z_NAP']
-post_samples_dict = {name: np.concatenate(journal.get_parameters(-1)[name]) for name in parameters_to_show}
-data = post_samples_dict[parameters_to_show[0]]
-for ind in range(1, len(parameters_to_show)):
-    data = np.hstack((data, post_samples_dict[parameters_to_show[ind]]))
-weights = np.concatenate(journal.get_weights(-1))
-index_to_simulate = np.random.choice(data.shape[0], 100, p=weights)
+    from sklearn.cluster import AgglomerativeClustering
+    from sklearn.metrics.cluster import adjusted_rand_score
+    cluster_lmnn = AgglomerativeClustering(n_clusters=3, affinity='euclidean', linkage='ward')
+    cluster_lmnn.fit_predict(X_lmnn)
+    print('AR score of Euclidean distance btwn LMNN: '+str(adjusted_rand_score(label, cluster_lmnn.labels_)))
 
-resultfakeobs = []
-for ind in range(100):
-    resultfakeobs.append(PD.forward_simulate([noAP, noNAP, SR_x, data[index_to_simulate[0],0], data[index_to_simulate[0],1],
-                                      data[index_to_simulate[0],2], data[index_to_simulate[0],3], data[index_to_simulate[0],4],
-                                      data[index_to_simulate[0],5], data[index_to_simulate[0],6]], 1))
-print(resultfakeobs)
-np.savez('fakeobs_34', resultfakeobs)
+for whichobs in renewed:
+    ########### Define Graphical Model ############
+    #Define which experimental study
+    if fake:
+        # True parameter 89.0, 76.0, 2.49, 7e-3, 7.7, 6e-3, 8e-4
+        XObserved = np.array([0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 2.11600000e+05, 5.96585366e+03,
+         2.00000000e+01, 3.90572997e+03, 1.59328549e+01, 1.38943902e+05, 0.00000000e+00,
+         6.00000000e+01, 3.42727305e+03, 2.80052570e+01, 8.57585366e+04, 0.00000000e+00,
+         1.20000000e+02, 2.33523014e+03, 7.57715388e+01, 4.25231707e+04, 0.00000000e+00,
+         3.00000000e+02, 1.74166329e+02, 2.46413793e+03, 5.15975610e+03, 0.00000000e+00])
+        obsdata = [np.array(XObserved).reshape(1, -1)]
+        noAP, noNAP, SR_x = int(my_data[0, 16]), int(my_data[0, 11]), float(my_data[0, 21])
+        # Define the indices used as features to remove timestamp etc. and values with NA
+        AllIndices = list(np.arange(0,25,1))
+        NANTimeIndices = [0, 5, 10, 15, 20] + list(np.arange(0, 5, 1)) + [4, 9, 14, 19, 24]
+        InformativeIndices = [item for item in AllIndices if item not in NANTimeIndices]
+    else:
+        XObserved = [np.hstack((np.array([0,20,60,120,300]).reshape(5,1),my_data[:,1:21][whichobs,:].reshape(4, 5).transpose())).flatten().reshape(1, -1)][0]
+        obsdata = [np.array(XObserved).reshape(1, -1)]
+        # Define the indices used as features to remove timestamp etc. and values with NA
+        AllIndices = list(np.arange(0, 25, 1))
+        NANTimeIndices = list(np.argwhere(np.isnan(XObserved[0, :])).reshape(-1, )) + [0, 5, 10, 15, 20]
+        InformativeIndices = [item for item in AllIndices if item not in NANTimeIndices]
+        noAP, noNAP, SR_x = int(my_data[whichobs, 16]), int(my_data[whichobs, 11]), float(my_data[whichobs, 21])
 
-# #resultfakeobs1 = PD.forward_simulate([4208, 147160, 400.0, 89.23867991870651, 76.86412615447622, 2.4914170141882135, 0.0007587473496343516, 7.702218665710551, 0.006532910756608233, 0.0008366912599321585], 1)
-#print(dist_calc.distance(obsdata, resultfakeobs1))
+    ## Summary statistics taking informative indices
+    identity = IdentityChosen(InformativeIndices=InformativeIndices, degree=1, cross=False)  # to apply before computing the statistics
+    ## Random values
+    # The parameters considered random and we want to infer
+    pAd = Uniform([[5], [150]], name='pAD')
+    pAg = Uniform([[5], [150]], name='pAg')
+    pT = Uniform([[0.1], [10.0]], name='pT')
+    pF = Uniform([[0.1e-3], [9.0e-3]], name='pF')
+    aT = Uniform([[0], [10]], name='aT')
+    v_z_AP =  Uniform([[1.0e-3], [9.0e-3]], name='v_z_AP')
+    v_z_NAP =  Uniform([[1.0e-4], [9.0e-4]], name='v_z_NAP')
+    PD = PlateletDeposition([noAP, noNAP, SR_x, pAd, pAg, pT, pF, aT, v_z_AP, v_z_NAP], name = 'PD')
+    #fakedata = PD.forward_simulate([noAP, noNAP, SR_x, 89.0, 76.0, 2.49, 7e-3, 7.7, 6e-3, 8e-4], k=1)
+    # # Define kernel and join the defined kernels
+    from abcpy.perturbationkernel import DefaultKernel
+    kernel = DefaultKernel([pAd, pAg, pT, pF, aT, v_z_AP, v_z_NAP])
 
+    # Now learn the optimal summary statistics to be used
+    ########## Define distance based on embedding learned #####
+    if simulate_pilot:
+        print('Simulate')
+        from Model import DrawFromPrior
+        draw_from_prior = DrawFromPrior([PD], backend=backend)
+        parameters, simulations = draw_from_prior.sample(255, n_samples_per_param=1)
+        if fake:
+            np.savez('Data/Pilots/simulation_pilot_fake.npz', parameters=parameters, simulations=simulations)
+        else:
+            np.savez('Data/Pilots/simulation_pilot_'+str(whichobs)+'.npz', parameters=parameters, simulations=simulations)
 
-# # # Define kernel and join the defined kernels
-# from abcpy.perturbationkernel import DefaultKernel
-# kernel = DefaultKernel([pAd, pAg, pT, pF, aT, v_z_AP, v_z_NAP])
-# #
-# # ## APMCABC ##
-# from abcpy.inferences import APMCABC
-# sampler = APMCABC([PD], [dist_calc], backend, kernel, seed = 1)
-# steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file =10, 3500, 1, 0.1, 0.001, 2, 1, None
-# print('APMCABC Inferring')
-# # We use resultfakeobs1 as our observed dataset
-# journal_apmcabc = sampler.sample([obsdata], steps, n_samples, n_samples_per_param, alpha, acceptance_cutoff, covFactor, full_output, journal_file)
-# print(journal_apmcabc.posterior_mean())
-# journal_apmcabc.save('apmcabc_obs_'+str(whichobsinfer)+'.jrnl')
+    if train_save_NN:
+        # # Define backend
+        # from abcpy.backends import BackendDummy
+        # backend = BackendDummy()
+        if fake:
+            parameters = np.load('Data/Pilots/simulation_pilot_fake.npz')['parameters']
+            simulations = np.load('Data/Pilots/simulation_pilot_fake.npz')['simulations']
+        else:
+            parameters = np.load('Data/ailots/simulation_pilot_'+str(whichobs)+'.npz')['parameters']
+            simulations = np.load('Data/Pilots/simulation_pilot_'+str(whichobs)+'.npz')['simulations']
+        print(parameters.shape, simulations.shape)
+        #now train the NNs with the different methods with the generated data
+        print("semiNN")
+        semiNN = SemiautomaticNN([PD], identity, backend=backend, parameters=parameters, simulations=simulations,
+                                  early_stopping=False,  batch_size=32,# early stopping
+                                  seed=1, n_epochs=1000, lr=1e-4, scale_samples=False) #1000
+        print("triplet")
+        triplet = TripletDistanceLearning([PD], identity, backend=backend, parameters=parameters, simulations=simulations,
+                                           early_stopping=False, batch_size=32, # early stopping
+                                           seed=1, n_epochs=2000, lr=1e-3, scale_samples=False) # 2000
+        # get the statistics from the StatisticsLearning object:
+        learned_seminn_stat = semiNN.get_statistics()
+        learned_triplet_stat = triplet.get_statistics()
+        # saving the learned net
+        if fake:
+            learned_seminn_stat.save_net("Data/Pilots/seminn_net_fake.pth")
+            learned_triplet_stat.save_net("Data/Pilots/triplet_net_fake.pth")
+        else:
+            learned_seminn_stat.save_net("Data/Pilots/seminn_net_"+str(whichobs)+".pth")
+            learned_triplet_stat.save_net("Data/Pilots/triplet_net_"+str(whichobs)+".pth")
+
+    if sample:
+        if fake:
+            learned_seminn_stat_loaded = NeuralEmbedding.fromFile("Data/Pilots/seminn_net_fake.pth", input_size=len(InformativeIndices), output_size=7, previous_statistics=identity)
+            learned_triplet_stat_loaded = NeuralEmbedding.fromFile("Data/Pilots/triplet_net_fake.pth", input_size=len(InformativeIndices), output_size=7, previous_statistics=identity)
+        else:
+            learned_seminn_stat_loaded = NeuralEmbedding.fromFile("Data/Pilots/seminn_net_"+str(whichobs)+".pth", input_size=len(InformativeIndices), output_size=7, previous_statistics=identity)
+            learned_triplet_stat_loaded = NeuralEmbedding.fromFile("Data/Pilots/triplet_net_"+str(whichobs)+".pth", input_size=len(InformativeIndices), output_size=7, previous_statistics=identity)
+
+        # Define Distance functions
+        from abcpy.distances import Euclidean
+        dist_calc_seminn = Euclidean(learned_seminn_stat_loaded)
+        dist_calc_triplet = Euclidean(learned_triplet_stat_loaded)
+        from statistic import Multiply
+        L = np.load('Data/L_all_3_cross.npz')['L']
+        stat_mult = Multiply(L=L, degree=3, cross=True)
+        dist_calc_mult = Euclidean(stat_mult)
+        print(dist_calc_mult.distance(obsdata, obsdata))
+
+        # print('Inference starting')
+        # # ## SABC - SemiNN##
+        from abcpy.inferences import SABC
+        print('Inference using Semi NN')
+        sampler = SABC([PD], [dist_calc_seminn], backend, kernel, seed=1)
+        steps, epsilon, n_samples, n_samples_per_param, ar_cutoff, full_output, journal_file = 25, 10e20, 511, 1, 0.001, 1, None
+        print('SABC Inferring')
+        journal_sabc = sampler.sample(observations=[obsdata], steps=steps, epsilon=epsilon, n_samples=n_samples,
+                                       n_samples_per_param=n_samples_per_param, beta=2, delta=0.2, v=0.3,
+                                       ar_cutoff=0.001, resample=None, n_update=None, full_output=1,
+                                       journal_file=journal_file)
+        print(journal_sabc.posterior_mean())
+        if fake:
+            journal_sabc.save('Data/Journals/sabc_obs_fake_seminn.jrnl')
+        else:
+            journal_sabc.save('Data/Journals/sabc_obs_' + str(whichobs) + '_seminn.jrnl')
+        ## SABC - Triplet##
+        print('Inference using Triplet Loss')
+        sampler = SABC([PD], [dist_calc_triplet], backend, kernel, seed=1)
+        steps, epsilon, n_samples, n_samples_per_param, ar_cutoff, full_output, journal_file = 10, 10e20, 511, 1, 0.001, 1, None
+        print('SABC Inferring')
+        journal_sabc = sampler.sample(observations=[obsdata], steps=steps, epsilon=epsilon, n_samples=n_samples,
+                                       n_samples_per_param=n_samples_per_param, beta=2, delta=0.2, v=0.3,
+                                       ar_cutoff=0.001, resample=None, n_update=None, full_output=1,
+                                       journal_file=journal_file)
+        print(journal_sabc.posterior_mean())
+        if fake:
+            journal_sabc.save('Data/Journals/sabc_obs_fake_triplet.jrnl')
+
+        else:
+            journal_sabc.save('Data/Journals/sabc_obs_' + str(whichobs) + '_triplet.jrnl')
+        # SABC - Multiply##
+        print('Inference using Classifier Loss')
+        sampler = SABC([PD], [dist_calc_mult], backend, kernel, seed=1)
+        steps, epsilon, n_samples, n_samples_per_param, ar_cutoff, full_output, journal_file = 20, 10e20, 511, 1, 0.001, 1, None
+        print('SABC Inferring')
+        journal_sabc = sampler.sample(observations=[obsdata], steps=steps, epsilon=epsilon, n_samples=n_samples,
+                                      n_samples_per_param=n_samples_per_param, beta=2, delta=0.2, v=0.3,
+                                      ar_cutoff=0.001, resample=None, n_update=None, full_output=1,
+                                      journal_file=journal_file)
+        print(journal_sabc.posterior_mean())
+        if fake:
+            journal_sabc.save('Data/Journals/sabc_obs_fake_multiply.jrnl')
+        else:
+            journal_sabc.save('Data/Journals/sabc_obs_' + str(whichobs) + '_multiply.jrnl')
+
+    if plot:
+        x_val = [20, 120, 300]
+        InformativeIndices = [[6, 16, 21], [7, 17, 22], [8, 18, 23]]
+        nameslabel = [r'$\mathbb{N}_{agg-clust} $', r'$\mathcal{S}_{agg-clust}}$', r'$\mathbb{N}_{platelet}$']
+        filename = ['naggclust', 'saggclust', 'np']
+        if fake:
+            for ind in range(3):
+                fig, ax = plt.subplots()
+                ax.set_title(nameslabel[ind], fontsize=35)
+                ax.plot(x_val, obsdata[0][0, InformativeIndices[ind]], color="black", marker=".",
+                        label=r'$\mathcal{x}^0$')
+                ax.set_xlabel("Time " + r"$(s)$", fontsize=30)
+                ax.set_xticks(x_val)
+                ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+                plt.xticks(fontsize=30)
+                plt.yticks(fontsize=30)
+            plt.tight_layout()
+            plt.savefig('FinalFigures/original_data/original_data_fake'+filename[ind]+'.pdf')
+            plt.close()
+        else:
+            fig, axs = plt.subplots(1, 3, figsize=(30, 10))  # 1
+            for ind, ax in enumerate(axs.ravel()):  # 2
+                ax.set_title(nameslabel[ind], fontsize=35)
+                ax.plot(x_val, obsdata[0][0, InformativeIndices[ind]], color="black", marker=".",
+                        label=r'$\mathcal{x}^0$')
+                ax.set_xlabel("Time " + r"$(s)$", fontsize=30)
+                ax.set_xticks(x_val)
+                ax.ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+                ax.tick_params(axis='both', labelsize=30)
+            plt.tight_layout()
+            plt.savefig('FinalFigures/original_data/original_data_' + str(whichobs) + '.pdf')
+            plt.close()

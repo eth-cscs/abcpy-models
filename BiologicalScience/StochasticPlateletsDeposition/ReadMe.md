@@ -1,24 +1,10 @@
 # Platelets Deposition Model
-Numerical model of platelet deposition and adhesion in human blood as described in Chopard (2017). 
-The summary statistics, distance functions and the ABC inference schemes are the same ones used in 
-Dutta et. al. (2018).
+Cardio/cerebrovascular diseases (CVD) have become one of the major health issue in our societies. But recent studies show that the present pathology tests to detect CVD are ineffectual as they do not consider different stages of platelet activation or the molecular dynamics involved in platelet interactions and are incapable to consider inter-individual variability. Here we propose a stochastic platelet deposition model and an inferential scheme to estimate the biologically meaningful model parameters using approximate Bayesian computation with a summary statistic that maximally discriminates between different types of patients. Inferred parameters from data collected on healthy volunteers and different patient types help us to identify specific biological parameters and hence biological reasoning behind the dysfunction for each type of patients. This work opens up an unprecedented opportunity of personalized pathology test for CVD detection and medical treatment. 
 
 ## Reference
-- Chopard B, de Sousa DR, Lätt J, Mountrakis L, Dubois F, Yourassowsky C, et al. A physical
-description of the adhesion and aggregation of platelets. Royal Society Open Science 4 (2017) 170219.
-- Dutta R, Chopard B, Lätt J, Dubois F, Zouaoui Boudjeltia K, Mira, A Parameter estimation of 
-platelets deposition: Approximate Bayesian computation with high performance computing. 
-Frontiers in Physiology: Computational Physiology and Medicine (2018)
+- Dutta, R., Zouaoui Boudjeltia, K., Kotsalos, C., Rousseau, A., Ribeiro de Sousa, D., Desmet, J., Van Meerhaeghe, A., Mira, A., Chopard, B., (2022), “Personalized pathology test for Cardio-vascular disease: Approximate Bayesian computation with discriminative summary statistics learning”, PLOS Computational Biology
 
 ## Dependencies 
 - g++ 
 - Swig 
-- abcpy0.5.2
-
-## Setup 
-
-- Run make 
-- You can run an example ABC inference scheme on the platelet deposition model by 'python3 Inference.py'
-- (if MPI is installed) 
-1. Modify line 31 of Inference.py from 'from abcpy.backends import BackendDummy as Backend' to 'from abcpy.backends import BackendMPI as Backend'
-2. To run: 'mpirun -np 8 python3 Inference.py'
+- abcpy0.6.3
